@@ -15,7 +15,7 @@ import webbrowser
 import requests
 from ytmusicapi import YTMusic
 
-VERSION = '1.0.0'
+VERSION = '1.0.1'
 REPOSITORY = 'Walleyfire/Albumilataaja'
 BASE = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
 TOOLS = BASE / 'tools'
@@ -83,7 +83,7 @@ class App(tk.Tk):
         super().__init__()
         icon=Path(getattr(sys,'_MEIPASS',Path(__file__).parent))/'app.ico'
         if icon.exists(): self.iconbitmap(str(icon))
-        self.title('Albumilataaja'); self.geometry('1060x900'); self.minsize(920,800)
+        self.title('Albumilataaja'); self.geometry('1060x960'); self.minsize(920,900)
         self.configure(bg='#101827')
         self.events = queue.Queue(); self.proc = None; self.busy = False
         self.cancel = threading.Event(); self.artists = []; self.albums = []; self.artist = ''; self.album_source = ''
@@ -94,7 +94,7 @@ class App(tk.Tk):
         self.format = tk.StringVar(value=settings.get('format','flac')); self.singles = tk.BooleanVar(value=True)
         self.source = tk.StringVar(value=settings.get('source','YouTube'))
         self.layout = tk.StringVar(value=settings.get('layout','Albumi, Vuosi'))
-        self.status = tk.StringVar(value='Hae artisti tai liitä YouTube-soittolistan linkki.')
+        self.status = tk.StringVar(value='Hae artisti tai liitä valitun palvelun linkki.')
         s=ttk.Style(self); s.theme_use('clam')
         s.configure('.', font=('Segoe UI',10), background='#101827', foreground='#e5eaf3')
         s.configure('TButton', padding=(12,8), background='#263c57', foreground='white')
@@ -151,12 +151,25 @@ class App(tk.Tk):
         ttk.Label(outer,text='FLAC-tallennus ei paranna YouTuben alkuperäistä äänenlaatua.',foreground='#9bacbf').pack(anchor='w')
         self.progress=ttk.Progressbar(outer,mode='indeterminate'); self.progress.pack(fill='x',pady=8)
         ttk.Label(outer,textvariable=self.status,wraplength=960).pack(anchor='w')
-        self.log=tk.Text(outer,height=4,bg='#0b1220',fg='#a8bfd6',font=('Consolas',9),relief='flat',state='disabled'); self.log.pack(fill='x',pady=(8,0))
+        log_header=ttk.Frame(outer); log_header.pack(fill='x',pady=(6,4))
+        ttk.Label(log_header,text='Latausloki',foreground='#9bacbf').pack(side='left')
+        self.console_visible=True
+        self.console_button=ttk.Button(log_header,text='Piilota console',command=self.toggle_console); self.console_button.pack(side='right')
+        self.log_frame=ttk.Frame(outer); self.log_frame.pack(fill='x')
+        self.log=tk.Text(self.log_frame,height=8,bg='#0b1220',fg='#c4d6e8',font=('Consolas',10),relief='flat',state='disabled',wrap='word'); self.log.pack(side='left',fill='both',expand=True)
+        log_scrollbar=ttk.Scrollbar(self.log_frame,orient='vertical',command=self.log.yview); log_scrollbar.pack(side='right',fill='y'); self.log.configure(yscrollcommand=log_scrollbar.set)
+        if not settings.get('show_console',True): self.toggle_console()
         self.protocol('WM_DELETE_WINDOW',self.close); self.after(100,self.poll)
         self.source_changed()
         self.after(1800,lambda:self.check_updates(False))
 
     def emit(self,kind,data): self.events.put((kind,data))
+    def toggle_console(self):
+        self.console_visible=not self.console_visible
+        if self.console_visible:
+            self.log_frame.pack(fill='x'); self.console_button.configure(text='Piilota console'); self.minsize(920,900)
+        else:
+            self.log_frame.pack_forget(); self.console_button.configure(text='Näytä console'); self.minsize(920,740)
     def log_line(self,line):
         self.log.configure(state='normal'); self.log.insert('end',line+'\n')
         if int(self.log.index('end-1c').split('.')[0])>500: self.log.delete('1.0','100.0')
@@ -172,10 +185,10 @@ class App(tk.Tk):
         spotify=self.source.get()=='Spotify (spotDL)'
         self.source_note.configure(text='Spotify-tiedot, ääni YouTubesta.' if spotify else 'Artistihaku ja albumit YouTube Musicista.')
         self.link_note.configure(text='Liitä Spotify-artistin linkki ladataksesi tuotannon albumeittain. Myös albumi, soittolista ja kappale käyvät.' if spotify else 'Liitä YouTube-videon tai albumisoittolistan https-linkki.')
-        self.search_btn.configure(text='Hae Spotify-julkaisut' if spotify else 'Hae artisti')
-        self.album_btn.configure(state='disabled' if spotify else 'normal')
+        self.search_btn.configure(text='Hae artisti')
+        self.album_btn.configure(state='normal')
         self.download_btn.configure(state='normal' if self.album_source==self.source.get() and self.albums else 'disabled')
-        self.combo.configure(state='disabled' if spotify else 'readonly')
+        self.combo.configure(state='readonly')
     def source_switched(self):
         self.artists=[]; self.albums=[]; self.album_source=''; self.artist_choice.set(''); self.combo['values']=[]
         self.tree.delete(*self.tree.get_children()); self.direct.set(''); self.source_changed()
@@ -218,33 +231,35 @@ class App(tk.Tk):
         self.status.set('Haetaan artisteja…')
         self.run_job(lambda:self.emit('artists',YTMusic(requests_session=requests.Session()).search(query,filter='artists',limit=12)))
     def search_spotify(self,query):
-        include=self.singles.get()
-        if query.startswith('https://'):
-            try: query=spotify_url(query)
-            except ValueError as e: messagebox.showerror('Spotify-linkki',str(e)); return
-        else: query='artist:'+query
-        self.status.set('Haetaan Spotify-artistin julkaisutietoja. Suuri tuotanto voi kestää hetken…')
-        def work():
-            with tempfile.TemporaryDirectory(prefix='Albumilataaja-search-') as temporary:
-                output=Path(temporary)/'artist.spotdl'
-                args=[str(TOOLS/'spotdl.exe'),'save',query,'--save-file',str(output),'--headless','--simple-tui','--max-retries','2','--ffmpeg',str(TOOLS/'ffmpeg.exe')]
-                code=self.execute(args)
-                if self.cancel.is_set(): return
-                if code or not output.exists(): raise RuntimeError('Spotify-haku epäonnistui. Katso loki tai kokeile suoraa Spotify-linkkiä.')
-                songs=json.loads(output.read_text(encoding='utf-8')); albums={}
-                for song in songs:
-                    if not include and song.get('album_type')=='single': continue
-                    key=song.get('album_id')
-                    if key and key not in albums:
-                        albums[key]={'title':song.get('album_name','Albumi'),'year':song.get('year',''),'kind':song.get('album_type','Albumi'), 'spotify_url':'https://open.spotify.com/album/'+key}
-                name=(songs[0].get('list_name') or songs[0].get('artist') or query) if songs else query
-                self.emit('albums',(name,list(albums.values())))
-        self.run_job(work)
+        self.status.set('Haetaan Spotify-artisteja…')
+        self.run_job(lambda:self.catalog_event('search',query,'artists'))
+    def catalog_event(self,operation,value,event,include_singles=True,artist=''):
+        data=self.catalog_data(operation,value,include_singles)
+        if data is not None: self.emit(event,(artist,data[event]) if event=='albums' else data[event])
+    def catalog_data(self,operation,value,include_singles=True):
+        with tempfile.TemporaryDirectory(prefix='Albumilataaja-catalog-') as temporary:
+            output=Path(temporary)/'result.json'
+            if getattr(sys,'frozen',False):
+                worker=TOOLS/'catalog.exe'
+                if not worker.exists(): raise RuntimeError('Hakutyökalu puuttuu. Asenna uusin versio uudelleen.')
+                args=[str(worker)]
+            else: args=[sys.executable,str(Path(__file__).with_name('spotify_catalog.py'))]
+            args += [operation,value,str(output)]
+            if not include_singles: args+=['--albums-only']
+            code=self.execute(args,metadata=True)
+            if self.cancel.is_set(): return None
+            data=json.loads(output.read_text(encoding='utf-8')) if output.exists() else {}
+            if code or data.get('error'): raise RuntimeError(data.get('error') or 'Spotify-haku epäonnistui. Kokeile uudelleen.')
+            key='artists' if operation=='search' else 'albums'
+            if key not in data: raise RuntimeError('Spotify-haku palautti puutteelliset tiedot.')
+            return data
     def load_albums(self):
         index=self.combo.current()
         if index<0: return
         chosen=self.artists[index]; include=self.singles.get()
         self.status.set('Haetaan artistin julkaisuja…')
+        if self.source.get()=='Spotify (spotDL)':
+            self.run_job(lambda:self.catalog_event('albums',chosen['spotify_id'],'albums',include,chosen['artist'])); return
         def work():
             y=YTMusic(); artist=y.get_artist(chosen['browseId']); albums=[]; seen=set()
             for section,kind in [('albums','Albumi')]+([('singles','Single / EP')] if include else []):
@@ -264,7 +279,7 @@ class App(tk.Tk):
             p=Path(self.destination.get()).expanduser(); p.mkdir(parents=True,exist_ok=True); os.startfile(p)
         except OSError as e: messagebox.showerror('Kansio',str(e))
     def save_settings(self):
-        CONFIG.write_text(json.dumps({'destination':self.destination.get(),'format':self.format.get(),'source':self.source.get(),'layout':self.layout.get()},ensure_ascii=False),encoding='utf-8')
+        CONFIG.write_text(json.dumps({'destination':self.destination.get(),'format':self.format.get(),'source':self.source.get(),'layout':self.layout.get(),'show_console':self.console_visible},ensure_ascii=False),encoding='utf-8')
     def download_selected(self):
         items=[dict(self.albums[int(i)]) for i in self.tree.selection()]
         if not items: messagebox.showinfo('Valitse julkaisut','Valitse ensin vähintään yksi julkaisu.'); return
@@ -282,16 +297,28 @@ class App(tk.Tk):
             urls=[spotify_url(u) for u in urls] if urls else [spotify_url(self.direct.get().strip())]
             root=Path(self.destination.get()).expanduser().resolve()
         except ValueError as e: messagebox.showerror('Linkki',str(e)); return
-        fmt=self.format.get(); layout=self.layout.get(); self.save_settings()
+        fmt=self.format.get(); layout=self.layout.get(); include_singles=self.singles.get(); self.save_settings()
         def work():
             root.mkdir(parents=True,exist_ok=True)
             for name in ['spotdl.exe','ffmpeg.exe','ffprobe.exe','deno.exe']:
                 if not (TOOLS/name).exists(): raise RuntimeError('Puuttuva tiedosto: '+name+'. Asenna sovellus uudelleen.')
             self.emit('status','spotDL hakee kappaleet ja lataa ne albumikansioihin…')
+            queue_urls=[]
+            for url in urls:
+                if re.search(r'/(?:intl-[a-z]+/)?artist/',urlparse(url).path):
+                    found=self.catalog_data('search',url)
+                    if found is None: return
+                    if not found['artists']: raise RuntimeError('Spotify-artistia ei löytynyt.')
+                    artist=found['artists'][0]
+                    catalog=self.catalog_data('albums',artist['spotify_id'],include_singles)
+                    if catalog is None: return
+                    queue_urls.extend(a['spotify_url'] for a in newest_first(catalog['albums']))
+                else: queue_urls.append(url)
+            if not queue_urls: raise RuntimeError('Ladattavia Spotify-julkaisuja ei löytynyt.')
             errors=False
-            for i,url in enumerate(urls,1):
+            for i,url in enumerate(queue_urls,1):
                 if self.cancel.is_set(): break
-                self.emit('status',f'spotDL: {i}/{len(urls)} • haetaan ja ladataan kappaleita…')
+                self.emit('status',f'spotDL: {i}/{len(queue_urls)} • haetaan ja ladataan kappaleita…')
                 result=self.execute(spot_command(url,root,fmt,layout))
                 errors=errors or bool(result) or self.download_errors
             if self.cancel.is_set(): self.emit('status','Keskeytetty. Valmiit kappaleet säilyvät.')
@@ -328,14 +355,14 @@ class App(tk.Tk):
                     if not self.cancel.is_set(): failures+=1; self.emit('log',str(e))
             self.emit('status','Keskeytetty. Valmiit kappaleet säilyvät.' if self.cancel.is_set() else (f'Valmis. Virheitä {failures} julkaisussa — katso loki.' if failures else 'Valmis. Musiikki on tallennuskansiossa.'))
         self.run_job(work)
-    def execute(self,args,capture=False):
+    def execute(self,args,capture=False,metadata=False):
         if self.cancel.is_set(): return '' if capture else 1
         self.download_errors=False
         env=os.environ.copy(); env['PATH']=str(TOOLS)+os.pathsep+env.get('PATH',''); env['PYTHONIOENCODING']='utf-8'; env['NO_COLOR']='1'
         p=subprocess.Popen(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE if capture else subprocess.STDOUT,text=True,encoding='utf-8',errors='replace',creationflags=NO_WINDOW,env=env,cwd=STATE)
         self.proc=p
         finished=threading.Event(); timed_out=threading.Event()
-        if capture or 'save' in args[1:2]:
+        if capture or metadata or 'save' in args[1:2]:
             def watchdog():
                 if not finished.wait(180) and p.poll() is None:
                     timed_out.set()

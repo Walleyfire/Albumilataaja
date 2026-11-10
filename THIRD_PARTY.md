@@ -12,3 +12,9 @@ Albumilataaja's own code is MIT licensed. The executable invokes separate comman
 - Inno Setup: https://jrsoftware.org/ . Installer compiler, not installed by the resulting end-user package.
 
 License texts are in licenses/. For corresponding third-party sources, exact versions, original upstream repositories and build recipes are linked above and in tools-lock.json. These components retain their original licenses.
+
+## Separate Spotify catalog worker
+
+`tools/catalog.exe` runs as an independent GPL-3.0-or-later process. Its source is `lahdekoodi/spotify_catalog.py`, also included as `licenses/catalog-source.py`. It uses SpotAPI 1.2.8 (GPLv3) for public metadata: https://pypi.org/project/spotapi/1.2.8/ (source distribution available under Download files). The MIT-licensed UI exchanges JSON files with this worker and does not import it. No Spotify account credentials are used.
+
+Worker dependencies include curl_cffi (MIT), cffi (MIT), Pillow (HPND), pycparser (BSD), readerwriterlock (MIT), typing_extensions (PSF), validators (MIT), pyotp (MIT), beautifulsoup4 (MIT), soupsieve (MIT), websockets (BSD), and colorama (BSD). Their license notices are included in licenses/.

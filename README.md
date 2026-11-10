@@ -44,9 +44,9 @@ Artistin linkki pyytää spotDL:ää käsittelemään löytämänsä tuotannon. 
 
 ### Julkaisujen esikatselu
 
-Kirjoita ylimpään hakukenttään artistin nimi tai Spotify-artistilinkki ja paina **Hae Spotify-julkaisut**. Tarkista tuloksesta artistin nimi ja julkaisut ennen lataamista. Valitse julkaisut ja paina **Lataa valitut julkaisut**.
+Kirjoita ylimpään hakukenttään artistin nimi tai Spotify-artistilinkki ja paina **Hae artisti**. Valitse hakutuloksista oikea artisti ja paina **Näytä julkaisut**. Valitse albumit listasta ja paina **Lataa valitut julkaisut**. Artistihaku ja koko albumilista haetaan erillisellä katalogityökalulla; spotDL lataa vasta valitut albumit.
 
-**Tunnettu rajoitus:** Spotify-artistin nimihaku ei löytänyt testiartistia ja koko artistin julkaisuhaku aikakatkaistiin. Spotify-kappalelinkin FLAC-lataus on testattu onnistuneesti. Käytä tarvittaessa suoria albumi- tai kappalelinkkejä. Julkaisutietojen haku aikakatkaistaan kolmen minuutin jälkeen ja sen voi keskeyttää.
+Spotify-artistihaku on korjattu: testissä **Eppu Normaali** löytyi nimellä ja listaan haettiin **53 julkaisua** sivutuksen kautta. Julkaisutietojen haku ei lataa kappaleita eikä käy ensin läpi jokaisen kappaleen metatietoja. Jos palvelu ei vastaa, haku aikakatkaistaan kolmen minuutin jälkeen. Haun voi myös keskeyttää.
 
 **spotDL käyttää Spotifya kappaletietoihin ja etsii äänen yleensä YouTubesta. Se ei lataa Spotifyn alkuperäisiä äänitiedostoja.** Vastaava kappale voi jäädä löytymättä tai löytyä eri versiona.
 
@@ -91,6 +91,8 @@ Kappaletiedostojen tarkka nimi riippuu latauslähteestä. YouTube-nimissä on mu
 
 ## Keskeytys ja jatkaminen
 
+Latausloki näkyy ikkunan alareunassa aiempaa suurempana. Siinä on vierityspalkki ja pitkät rivit rivittyvät. **Piilota console** piilottaa lokin ja **Näytä console** palauttaa sen näkyviin. Lokitietoja kertyy myös piilotettuna. Näkyvyysasetus muistetaan seuraavalla käynnistyksellä.
+
 Paina **Keskeytä** pysäyttääksesi toiminnon. Valmiit kappaleet säilyvät. Käynnistä sama lataus myöhemmin uudelleen samalla tallennuskansiolla, kansiomuodolla ja tiedostomuodolla: jo ladatut kappaleet ohitetaan. Keskeneräinen kappale voidaan ladata uudelleen. Latausarkistotiedostot säilyttävät tiedon valmiista latauksista.
 
 ## Päivitykset
@@ -107,7 +109,7 @@ Päivitys asennetaan hyväksynnän jälkeen ilman asennusvelhon läpikäyntiä. 
 | Ongelma | Ratkaisu |
 |---|---|
 | Artisti ei löydy | Tarkista kirjoitusasu tai käytä suoraa albumilinkkiä. |
-| Spotify-artistihaku epäonnistuu | Käytä albumi- tai kappalelinkkiä. Katso yllä oleva tunnettu rajoitus. |
+| Spotify-artistihaku epäonnistuu | Tarkista päivitykset, kokeile uudelleen tai käytä artistin tai albumin suoraa linkkiä. |
 | Kappale jää lataamatta | Katso loki. Sisältö voi olla poistettu, alueella estetty tai vaatia kirjautumisen, jota tämä versio ei tue. |
 | Puuttuva työkalu | Asenna sovellus uudelleen tai pura portable-paketti kokonaan. |
 | Päivitystarkistus epäonnistuu | Tarkista verkkoyhteys ja kokeile myöhemmin. Asentajan voi ladata myös GitHub Releasesista. |
