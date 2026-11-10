@@ -94,4 +94,9 @@ def main():
         args.output.write_text(json.dumps({'error':'Spotify-tietojen haku epäonnistui: '+str(error)},ensure_ascii=False),encoding='utf-8')
         return 1
 
-if __name__=='__main__': raise SystemExit(main())
+if __name__=='__main__':
+    import sys
+    if sys.argv[1:]==['--self-test']:
+        create_client()
+        print('Catalog dependencies ready')
+    else: raise SystemExit(main())

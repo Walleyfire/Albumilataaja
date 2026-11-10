@@ -1,4 +1,4 @@
 requests==2.32.5
 ytmusicapi==1.12.3
 pyinstaller==6.22.3
-spotapi[websocket]==1.2.8
+spotapi[websocket,pymongo,redis]==1.2.8

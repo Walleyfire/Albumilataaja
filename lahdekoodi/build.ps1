@@ -12,6 +12,8 @@ python (Join-Path $source 'fetch_tools.py') (Join-Path $package 'tools')
 if ($LASTEXITCODE) { throw 'Tool download failed' }
 python -m PyInstaller --noconfirm --clean --console --onefile --name catalog --distpath (Join-Path $package 'tools') --workpath (Join-Path $repo 'build-catalog') --specpath (Join-Path $repo 'build-catalog') --collect-all spotapi --collect-all curl_cffi (Join-Path $source 'spotify_catalog.py')
 if ($LASTEXITCODE) { throw 'Catalog worker build failed' }
+& (Join-Path $package 'tools\catalog.exe') --self-test
+if ($LASTEXITCODE) { throw 'Catalog worker dependency check failed' }
 python -m PyInstaller --noconfirm --clean --windowed --onefile --name Albumilataaja --icon (Join-Path $source 'app.ico') --add-data "$(Join-Path $source 'app.ico');." --distpath $package --workpath (Join-Path $repo 'build') --specpath (Join-Path $repo 'build') --collect-all ytmusicapi (Join-Path $source 'app.py')
 if ($LASTEXITCODE) { throw 'Application build failed' }
 Copy-Item -LiteralPath (Join-Path $repo 'licenses') -Destination $package -Recurse -Force
