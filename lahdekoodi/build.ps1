@@ -25,6 +25,8 @@ if (-not $Iscc) {
   $Iscc = $candidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 }
 if (-not $Iscc) { throw 'Install Inno Setup 6/7 or provide -Iscc with the compiler path.' }
+python (Join-Path $source 'verify_restart.py') --iscc $Iscc --package $package --work (Join-Path $repo 'build-restart')
+if ($LASTEXITCODE) { throw 'Installer restart regression failed' }
 $dist = Join-Path $repo 'dist'
 & $Iscc "/DAppVersion=$appVersion" "/DPackageDir=$package" "/DOutputDirPath=$dist" (Join-Path $source 'installer.iss')
 if ($LASTEXITCODE) { throw 'Installer build failed' }

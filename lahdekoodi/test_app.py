@@ -64,6 +64,7 @@ class AppTests(unittest.TestCase):
                         args=launch.call_args.args[0]
                         self.assertEqual(Path(args[0]).read_bytes(),payload)
                         self.assertIn('/UPDATEAPP=1',args)
+                        self.assertEqual(launch.call_args.kwargs['env']['PYINSTALLER_RESET_ENVIRONMENT'],'1')
                     else:
                         with self.assertRaises(ValueError): app.App.offer_update(fake,release)
                         launch.assert_not_called()

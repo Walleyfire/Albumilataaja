@@ -102,6 +102,8 @@ Paina **Keskeytä** pysäyttääksesi toiminnon. Valmiit kappaleet säilyvät. K
 3. Asentajan SHA-256 tarkistetaan julkaisun **SHA256SUMS.txt**-tiedostosta. Virheellistä latausta ei avata.
 4. Hyväksytty päivitys asentuu automaattisesti, näyttää asennuksen edistymisen ja käynnistää sovelluksen uudelleen. Asennus tehdään samaan sovelluskansioon. Musiikkikansio ja asetukset säilyvät.
 
+Päivityksen jälkeinen uudelleenkäynnistys käyttää omaa uutta ajonaikaista kansiota. Tämä korjaa aiempien versioiden **Failed to load Python DLL** -virheen. Korjaus on myös asentajassa, joten päivitys vanhasta versiosta toimii. Jos vanha versio näyttää virheen ennen päivittämistä, sulje virheilmoitus ja avaa sovellus uudelleen pikakuvakkeesta tai käynnistä uusin asentaja käsin. Pythonia ei tarvitse asentaa erikseen.
+
 Päivitys asennetaan hyväksynnän jälkeen ilman asennusvelhon läpikäyntiä. Tarkistussumma varmistaa tiedoston eheyden; julkaisuja ei ole digitaalisesti allekirjoitettu. Päivitys sisältää myös mukana toimitetut latausmoottorit, joita ei päivitetä erikseen sovelluksesta. Portable-versiokin päivittyy nykyiseen kansioonsa asentajan kautta ja rekisteröityy Windowsiin asennetuksi sovellukseksi.
 
 ## Ongelmatilanteet

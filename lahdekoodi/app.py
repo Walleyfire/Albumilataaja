@@ -15,7 +15,7 @@ import webbrowser
 import requests
 from ytmusicapi import YTMusic
 
-VERSION = '1.0.1'
+VERSION = '1.0.2'
 REPOSITORY = 'Walleyfire/Albumilataaja'
 BASE = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
 TOOLS = BASE / 'tools'
@@ -426,9 +426,14 @@ class App(tk.Tk):
                         if self.cancel.is_set(): raise RuntimeError('Päivityksen lataus keskeytetty.')
                         if block: f.write(block); h.update(block)
             if h.hexdigest()!=expected.lower(): dest.unlink(); raise ValueError('Päivityksen tarkistussumma ei täsmää.')
-            subprocess.Popen([str(dest),'/SILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/CLOSEAPPLICATIONS','/UPDATEAPP=1','/DIR='+str(BASE)],creationflags=NO_WINDOW)
+            update_environment=os.environ.copy()
+            update_environment['PYINSTALLER_RESET_ENVIRONMENT']='1'
+            subprocess.Popen([str(dest),'/SILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/CLOSEAPPLICATIONS','/UPDATEAPP=1','/DIR='+str(BASE)],creationflags=NO_WINDOW,env=update_environment)
             self.emit('exit_for_update',None)
         self.run_job(work)
 
 if __name__=='__main__':
-    App().mainloop()
+    if len(sys.argv)==3 and sys.argv[1]=='--runtime-self-test':
+        runtime=Path(getattr(sys,'_MEIPASS',Path(__file__).parent))
+        Path(sys.argv[2]).write_text(json.dumps({'version':VERSION,'runtime_directory':str(runtime),'python_dll_present':(runtime/'python314.dll').is_file()}),encoding='utf-8')
+    else: App().mainloop()

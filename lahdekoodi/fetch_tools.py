@@ -8,7 +8,7 @@ import zipfile
 
 def fetch(destination):
     destination=Path(destination).resolve(); destination.mkdir(parents=True,exist_ok=True)
-    cache=destination.parent/'tool-downloads'; cache.mkdir(exist_ok=True)
+    cache=destination.parent.parent/'tool-downloads'; cache.mkdir(exist_ok=True)
     lock=json.loads(Path(__file__).with_name('tools-lock.json').read_text())
     for item in lock:
         archive=cache/item['filename']

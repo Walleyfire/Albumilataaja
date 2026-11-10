@@ -51,6 +51,16 @@ Name: "{autodesktop}\Albumilataaja"; Filename: "{app}\Albumilataaja.exe"; Tasks:
 Filename: "{app}\Albumilataaja.exe"; Description: "Käynnistä Albumilataaja"; Flags: nowait postinstall skipifsilent; Check: not IsUpdateMode
 Filename: "{app}\Albumilataaja.exe"; Flags: nowait; Check: IsUpdateMode
 [Code]
+function SetEnvironmentVariableW(Name, Value: String): Integer;
+  external 'SetEnvironmentVariableW@kernel32.dll stdcall';
+
+function InitializeSetup: Boolean;
+begin
+  { Older app versions pass their onefile runtime environment to Setup.
+    Reset it in Setup as well, so upgrading from those versions is safe. }
+  Result := SetEnvironmentVariableW('PYINSTALLER_RESET_ENVIRONMENT', '1') <> 0;
+end;
+
 function IsUpdateMode: Boolean;
 begin
   Result := ExpandConstant('{param:UPDATEAPP|0}') = '1';

@@ -5,6 +5,7 @@ __pycache__/
 *.pyc
 build/
 build-catalog/
+build-restart/
 dist/
 tool-downloads/
 *.spec
