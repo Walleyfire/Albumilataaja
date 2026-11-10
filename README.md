@@ -17,10 +17,10 @@ Asennus tapahtuu omaan käyttäjäprofiiliin ilman järjestelmänvalvojan oikeuk
 
 ## Artistin albumit YouTubesta
 
-1. Valitse **Latauslähde → YouTube**.
+1. Valitse **Lähde → YouTube**.
 2. Kirjoita artistin nimi ylimpään hakukenttään ja paina **Hae artisti**.
 3. Valitse hakukentän alapuolisesta listasta oikea artisti.
-4. Valitse, otetaanko mukaan **Myös singlet ja EP:t**.
+4. Valitse, otetaanko mukaan **Singlet ja EP:t**.
 5. Paina **Näytä julkaisut**. Julkaisut näkyvät uusimmasta vanhimpaan.
 6. Valitse haluamasi albumit: **Ctrl** valitsee erillisiä rivejä, **Shift** rivivälin ja **Valitse kaikki** koko listan.
 7. Valitse **Tallennuskansio**, **Muoto** ja **Kansiomuoto**.
@@ -30,7 +30,7 @@ Asennus tapahtuu omaan käyttäjäprofiiliin ilman järjestelmänvalvojan oikeuk
 
 ## Spotify ja spotDL
 
-Valitse **Latauslähde → Spotify (spotDL)**.
+Valitse **Lähde → Spotify**.
 
 ### Lataaminen linkistä
 
@@ -95,6 +95,12 @@ Latausloki näkyy ikkunan alareunassa aiempaa suurempana. Siinä on vierityspalk
 
 Paina **Keskeytä** pysäyttääksesi toiminnon. Valmiit kappaleet säilyvät. Käynnistä sama lataus myöhemmin uudelleen samalla tallennuskansiolla, kansiomuodolla ja tiedostomuodolla: jo ladatut kappaleet ohitetaan. Keskeneräinen kappale voidaan ladata uudelleen. Latausarkistotiedostot säilyttävät tiedon valmiista latauksista.
 
+## Tumma käyttöliittymä ja koko latausjonon aika-arvio
+
+Sovelluksen tausta on musta/tumma, painikkeet ovat pyöristettyjä ja Windowsin ikkunapalkki käyttää samaa tummaa teemaa. **YouTube** käyttää punaisia ja **Spotify** vihreitä korostuksia. Julkaisulista mukautuu teemaan. Näkyviä vierityspalkkeja ei ole; listaa ja lokia voi vierittää hiiren rullalla.
+
+Latauspalkki seuraa **koko valittua jonoa**, ei pelkästään yhtä kappaletta. Sen alla näkyvät käsitellyt julkaisut, kokonaisprosentti ja likimääräinen jäljellä oleva aika, esimerkiksi **Koko jono · 25 % · 2/8 julkaisua · noin 18 min jäljellä**. Aika-arvio perustuu toteutuneeseen nopeuteen ja julkaisujen edistymiseen. Se tarkentuu työn edetessä; eri kokoiset albumit, verkkoyhteys ja äänen muuntaminen voivat muuttaa arviota. Alussa näytetään **lasketaan aika-arviota**. Keskeytettyä jonoa ei näytetä valmiina.
+
 ## Päivitykset
 
 1. Sovellus tarkistaa uusimman vakaan GitHub-julkaisun käynnistyessään. Voit tarkistaa myös painikkeella **Tarkista päivitykset**.
@@ -115,7 +121,7 @@ Päivitys asennetaan hyväksynnän jälkeen ilman asennusvelhon läpikäyntiä. 
 | Kappale jää lataamatta | Katso loki. Sisältö voi olla poistettu, alueella estetty tai vaatia kirjautumisen, jota tämä versio ei tue. |
 | Puuttuva työkalu | Asenna sovellus uudelleen tai pura portable-paketti kokonaan. |
 | Päivitystarkistus epäonnistuu | Tarkista verkkoyhteys ja kokeile myöhemmin. Asentajan voi ladata myös GitHub Releasesista. |
-| Julkaisuja puuttuu | Tarkista **Myös singlet ja EP:t** ja hae uudelleen. Palvelun valikoima voi silti olla puutteellinen. |
+| Julkaisuja puuttuu | Tarkista **Singlet ja EP:t** ja hae uudelleen. Palvelun valikoima voi silti olla puutteellinen. |
 | Kansiot eivät näy uusimmat ensin | Käytä kansiomuotoa **Vuosi - Albumi** ja Resurssienhallinnan lajittelua **Nimi, laskeva**. |
 
 Ongelmailmoituksessa kerro sovelluksen versio, valittu lähde, ongelmaan johtaneet vaiheet ja tarvittava osa lokista. Älä lähetä salasanoja, evästeitä tai kirjautumistietoja.

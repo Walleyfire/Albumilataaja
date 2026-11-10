@@ -14,7 +14,7 @@ python -m PyInstaller --noconfirm --clean --console --onefile --name catalog --d
 if ($LASTEXITCODE) { throw 'Catalog worker build failed' }
 & (Join-Path $package 'tools\catalog.exe') --self-test
 if ($LASTEXITCODE) { throw 'Catalog worker dependency check failed' }
-python -m PyInstaller --noconfirm --clean --windowed --onefile --name Albumilataaja --icon (Join-Path $source 'app.ico') --add-data "$(Join-Path $source 'app.ico');." --distpath $package --workpath (Join-Path $repo 'build') --specpath (Join-Path $repo 'build') --collect-all ytmusicapi (Join-Path $source 'app.py')
+python -m PyInstaller --noconfirm --clean --windowed --onefile --name Albumilataaja --icon (Join-Path $source 'app.ico') --add-data "$(Join-Path $source 'app.ico');." --distpath $package --workpath (Join-Path $repo 'build') --specpath (Join-Path $repo 'build') --collect-all ytmusicapi --collect-all customtkinter (Join-Path $source 'app.py')
 if ($LASTEXITCODE) { throw 'Application build failed' }
 Copy-Item -LiteralPath (Join-Path $repo 'licenses') -Destination $package -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $repo 'README.md'),(Join-Path $repo 'THIRD_PARTY.md'),(Join-Path $repo 'LICENSE') -Destination $package -Force
