@@ -108,7 +108,7 @@ class App(tk.Tk):
         top=ttk.Frame(outer); top.pack(fill='x')
         ttk.Label(top,text='ALBUMILATAAJA',font=('Segoe UI',22,'bold')).pack(side='left')
         ttk.Button(top,text='Tarkista päivitykset',command=lambda:self.check_updates(True)).pack(side='right')
-        ttk.Label(outer,text='Oma musiikkikirjasto  •  '+VERSION,foreground='#9bacbf').pack(anchor='w',pady=(2,12))
+        ttk.Label(outer,text='Oma musiikkikirjasto',foreground='#9bacbf').pack(anchor='w',pady=(2,12))
         sources=ttk.Frame(outer); sources.pack(fill='x',pady=(0,10))
         ttk.Label(sources,text='Latauslähde  ').pack(side='left')
         self.source_combo=ttk.Combobox(sources,textvariable=self.source,values=['YouTube','Spotify (spotDL)'],state='readonly',width=22)
