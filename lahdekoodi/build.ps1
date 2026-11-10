@@ -27,4 +27,8 @@ if ($LASTEXITCODE) { throw 'Installer build failed' }
 $installer=Join-Path $dist 'Albumilataaja-Setup.exe'
 $hash=(Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
 Set-Content -LiteralPath (Join-Path $dist 'SHA256SUMS.txt') -Value "$hash  Albumilataaja-Setup.exe" -Encoding ascii
+$portable=Join-Path $dist 'Albumilataaja-portable.zip'
+Compress-Archive -LiteralPath $package -DestinationPath $portable -Force
+$portableHash=(Get-FileHash -LiteralPath $portable -Algorithm SHA256).Hash.ToLowerInvariant()
+Add-Content -LiteralPath (Join-Path $dist 'SHA256SUMS.txt') -Value "$portableHash  Albumilataaja-portable.zip" -Encoding ascii
 Write-Output "Built Albumilataaja $appVersion in $dist"

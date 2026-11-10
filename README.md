@@ -6,6 +6,8 @@ Suomenkielinen Windows 10/11 x64 -sovellus musiikin lataamiseen. Tavallinen ikku
 
 Lataa GitHub Releasesista **Albumilataaja-Setup.exe** ja suorita se. Asennus tehdään omaan käyttäjäprofiiliin ilman järjestelmänvalvojan oikeuksia. Sovellusta ja asentajaa ei ole allekirjoitettu koodin allekirjoitusvarmenteella.
 
+Ilman asennusta: pura **Albumilataaja-portable.zip** kokonaan ja käynnistä sen sisältä **Albumilataaja.exe**. Säilytä tools-kansio exe-tiedoston vieressä. Portable-versiossa päivityspainike avaa tavallisen asentajan.
+
 ## Käyttö
 
 1. Valitse **YouTube** tai **Spotify (spotDL)**.
