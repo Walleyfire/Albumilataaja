@@ -1,36 +1,137 @@
 # Albumilataaja
 
-Suomenkielinen Windows 10/11 x64 -sovellus musiikin lataamiseen. Tavallinen ikkuna, ei konsoli-ikkunaa. Pythonia tai komentorivityökaluja ei tarvitse asentaa käyttäjän koneelle.
+Suomenkielinen Windows 10/11 x64 -sovellus musiikin lataamiseen. Tavallinen sovellusikkuna, ei konsolia. Pythonia tai erillisiä komentorivityökaluja ei tarvitse asentaa.
 
-## Asentaminen
+**[Lataa uusin versio](https://github.com/Walleyfire/Albumilataaja/releases/latest)** · **[Ilmoita ongelmasta](https://github.com/Walleyfire/Albumilataaja/issues)**
 
-Lataa GitHub Releasesista **Albumilataaja-Setup.exe** ja suorita se. Asennus tehdään omaan käyttäjäprofiiliin ilman järjestelmänvalvojan oikeuksia. Sovellusta ja asentajaa ei ole allekirjoitettu koodin allekirjoitusvarmenteella.
+## Asennus
 
-Ilman asennusta: pura **Albumilataaja-portable.zip** kokonaan ja käynnistä sen sisältä **Albumilataaja.exe**. Säilytä tools-kansio exe-tiedoston vieressä. Portable-versiossa päivityspainike avaa tavallisen asentajan.
+1. Avaa **Lataa uusin versio** ja julkaisun **Assets**-lista.
+2. Lataa **Albumilataaja-Setup.exe** ja käynnistä se.
+3. Valitse suomi ja seuraa asentajan ohjeita. Voit luoda työpöydän pikakuvakkeen.
+4. Käynnistä **Albumilataaja** työpöydältä tai Käynnistä-valikosta.
 
-## Käyttö
+Asennus tapahtuu omaan käyttäjäprofiiliin ilman järjestelmänvalvojan oikeuksia. Oletuskansio on `%LOCALAPPDATA%\Programs\Albumilataaja`. Asentaja sisältää tarvittavat lataus- ja äänenkäsittelytyökalut. Sovelluksella ja asentajalla ei ole koodin allekirjoitusvarmennetta.
 
-1. Valitse **YouTube** tai **Spotify (spotDL)**.
-2. YouTube: kirjoita artistin nimi, paina **Hae artisti**, valitse oikea artisti ja **Näytä julkaisut**. Valitse haluamasi julkaisut tai **Valitse kaikki**, sitten **Lataa valitut julkaisut**. Myös singlet ja EP:t voi sisällyttää hakuun. Vaihtoehtoisesti liitä videon tai albumisoittolistan linkki ja paina **Lataa linkistä**.
-3. Spotify: kirjoita artistin nimi ja paina **Hae Spotify-julkaisut**. Hakuun voi syöttää myös suoran Spotify-artistilinkin. spotDL hakee parhaaksi osuvan artistin tuotannon; tarkista tuloksesta artistin nimi ja julkaisut ennen lataamista. Voit myös liittää Spotify-artistin, albumin, soittolistan tai kappaleen linkin ja painaa **Lataa linkistä**. Artistin linkki käsittelee spotDL:n löytämän tuotannon.
-4. Valitse tallennuskansio ja tiedostomuoto: FLAC, Opus, MP3 tai M4A.
+**Ilman asennusta:** lataa **Albumilataaja-portable.zip**, pura ZIP kokonaan omaan kansioon ja käynnistä sen sisältä **Albumilataaja.exe**. Säilytä **tools**-kansio exe-tiedoston vieressä. Pelkkä exe-tiedoston kopioiminen ei riitä. Portable-version päivityspainike avaa tavallisen asentajan.
 
-Tiedostot järjestetään **Artisti / 2026 - Albumi / Kappale** -kansioihin. Sovelluksen albumilista ja valittujen albumien latausjono ovat uusimmasta vanhimpaan; tuntemattomat vuodet tulevat viimeiseksi. Resurssienhallinnassa käytä lajittelua **Nimi, laskeva**, niin uusimmat albumikansiot näkyvät ensin. Suoran YouTube-linkin kansiot perustuvat kanavan ja soittolistan nimeen; vuosiluku lisätään, jos julkaisuvuosi on saatavilla. Valmiit lataukset ohitetaan samassa kansiossa ja muodossa. Keskeytetyn työn voi aloittaa uudelleen; valmiit kappaleet säilyvät. Epäonnistuneet lataukset näkyvät ikkunan lokissa.
+## Artistin albumit YouTubesta
 
-## Äänenlaatu ja saatavuus
+1. Valitse **Latauslähde → YouTube**.
+2. Kirjoita artistin nimi ylimpään hakukenttään ja paina **Hae artisti**.
+3. Valitse hakukentän alapuolisesta listasta oikea artisti.
+4. Valitse, otetaanko mukaan **Myös singlet ja EP:t**.
+5. Paina **Näytä julkaisut**. Julkaisut näkyvät uusimmasta vanhimpaan.
+6. Valitse haluamasi albumit: **Ctrl** valitsee erillisiä rivejä, **Shift** rivivälin ja **Valitse kaikki** koko listan.
+7. Valitse **Tallennuskansio**, **Muoto** ja **Kansiomuoto**.
+8. Paina **Lataa valitut julkaisut**. Edistyminen ja virheet näkyvät ikkunan alareunassa.
 
-YouTube-ääni on häviöllisesti pakattua. FLAC-muunnos ei tee siitä alkuperäistä häviötöntä ääntä. spotDL käyttää Spotifya kappaletietoihin ja hakee vastaavan äänen yleensä YouTubesta; se ei pura Spotifyn äänitiedostoja. Koko tuotannon löytymistä, versioiden oikeellisuutta tai kaikkien kappaleiden saatavuutta ei voi taata. Käytä sovellusta sisältöön, jonka lataamiseen sinulla on oikeus.
+**Suora linkki:** kopioi YouTubesta albumisoittolistan tai yksittäisen videon https-linkki, liitä se albumilistan alla olevaan linkkikenttään ja paina **Lataa linkistä**.
+
+## Spotify ja spotDL
+
+Valitse **Latauslähde → Spotify (spotDL)**.
+
+### Lataaminen linkistä
+
+1. Avaa Spotifyssa artisti, albumi, soittolista tai kappale.
+2. Valitse sen valikosta **Jaa → Kopioi linkki**.
+3. Liitä `https://open.spotify.com/...`-linkki sovelluksen linkkikenttään.
+4. Valitse tallennuskansio, tiedostomuoto ja kansiomuoto.
+5. Paina **Lataa linkistä**.
+
+Artistin linkki pyytää spotDL:ää käsittelemään löytämänsä tuotannon. Albumin linkki käsittelee yhden albumin. Tämä versio ei sisällä Spotify-kirjautumista eikä yksityisten soittolistojen tai käyttäjän tallennettujen kappaleiden lataamista.
+
+### Julkaisujen esikatselu
+
+Kirjoita ylimpään hakukenttään artistin nimi tai Spotify-artistilinkki ja paina **Hae Spotify-julkaisut**. Tarkista tuloksesta artistin nimi ja julkaisut ennen lataamista. Valitse julkaisut ja paina **Lataa valitut julkaisut**.
+
+**Tunnettu rajoitus:** Spotify-artistin nimihaku ei löytänyt testiartistia ja koko artistin julkaisuhaku aikakatkaistiin. Spotify-kappalelinkin FLAC-lataus on testattu onnistuneesti. Käytä tarvittaessa suoria albumi- tai kappalelinkkejä. Julkaisutietojen haku aikakatkaistaan kolmen minuutin jälkeen ja sen voi keskeyttää.
+
+**spotDL käyttää Spotifya kappaletietoihin ja etsii äänen yleensä YouTubesta. Se ei lataa Spotifyn alkuperäisiä äänitiedostoja.** Vastaava kappale voi jäädä löytymättä tai löytyä eri versiona.
+
+## Kansiot ja albumien järjestys
+
+**Kansiomuoto**-valitsimella on kaksi vaihtoehtoa, jotka toimivat molemmilla latauslähteillä:
+
+```text
+Albumi, Vuosi (oletus):
+Musiikki/
+└── Artisti/
+    └── Albumin nimi, 2026/
+        ├── 01 - Kappale.flac
+        └── 02 - Toinen kappale.flac
+
+Vuosi - Albumi:
+Musiikki/
+└── Artisti/
+    ├── 2026 - Uusin albumi/
+    ├── 2024 - Edellinen albumi/
+    └── 2020 - Vanhempi albumi/
+```
+
+Kappaletiedostojen tarkka nimi riippuu latauslähteestä. YouTube-nimissä on mukana videon tunniste, Spotify-nimissä levy- ja kappalenumero.
+
+- Albumilista ja valittujen julkaisujen latausjono ovat **uusimmasta vanhimpaan julkaisuvuoden perusteella**, kansiomuodosta riippumatta. Saman vuoden julkaisut ovat nimen mukaan. Tuntemattomat vuodet tulevat viimeiseksi.
+- Jos haluat myös Resurssienhallinnan albumikansiot uusimmasta vanhimpaan, valitse **Vuosi - Albumi** ja Resurssienhallinnassa lajittelu **Nimi, laskeva**. Sovellus ei muuta Resurssienhallinnan asetuksia.
+- Suoran YouTube-linkin kansiot perustuvat kanavan ja soittolistan nimeen. Vuosiluku lisätään, jos julkaisuvuosi löytyy tiedoista.
+- Paina **Avaa kansio** nähdäksesi tallennetut kappaleet.
+- Kansiomuodon vaihtaminen koskee seuraavia latauksia. Se ei nimeä jo ladattuja kansioita uudelleen. Eri muoto voi siksi luoda samasta albumista toisen kansion.
+
+## Tiedostomuoto ja äänenlaatu
+
+| Muoto | Käyttö |
+|---|---|
+| FLAC | Häviötön tallennusmuoto, suuret tiedostot. |
+| Opus | Pienemmät tiedostot, sopii hyvin YouTube-lähteeseen. |
+| MP3 | Laaja soitinyhteensopivuus. |
+| M4A | Yleinen äänen tallennusmuoto. |
+
+**YouTuben ääni on jo häviöllisesti pakattu. FLAC-muunnos ei palauta menetettyä äänenlaatua.** Sama koskee spotDL:ää, kun ääni tulee YouTubesta. Koko tuotannon, oikean kappaleversion tai kaikkien metatietojen löytymistä ei taata. Käytä sisältöä, jonka lataamiseen sinulla on oikeus.
+
+## Keskeytys ja jatkaminen
+
+Paina **Keskeytä** pysäyttääksesi toiminnon. Valmiit kappaleet säilyvät. Käynnistä sama lataus myöhemmin uudelleen samalla tallennuskansiolla, kansiomuodolla ja tiedostomuodolla: jo ladatut kappaleet ohitetaan. Keskeneräinen kappale voidaan ladata uudelleen. Latausarkistotiedostot säilyttävät tiedon valmiista latauksista.
 
 ## Päivitykset
 
-Sovellus tarkistaa uusimman vakaan GitHub-julkaisun käynnistyessään. Voit myös painaa **Tarkista päivitykset**. Uusi asentaja ladataan käyttäjän hyväksynnän jälkeen, sen SHA-256 tarkistetaan julkaisun tarkistussummatiedostosta ja asennus käynnistyy. Asentaja päivittää saman sovelluksen paikalleen. Musiikkikansio ja asetukset säilyvät. Tarkistussumma varmistaa tiedoston eheyden; julkaisuja ei ole digitaalisesti allekirjoitettu. Asetukset ovat `%LOCALAPPDATA%\Albumilataaja\settings.json`.
+1. Sovellus tarkistaa uusimman vakaan GitHub-julkaisun käynnistyessään. Voit tarkistaa myös painikkeella **Tarkista päivitykset**.
+2. Jos uusi versio löytyy, sovellus kysyy, ladataanko ja avataanko asentaja.
+3. Asentajan SHA-256 tarkistetaan julkaisun **SHA256SUMS.txt**-tiedostosta. Virheellistä latausta ei avata.
+4. Seuraa asentajan ohjeita. Asentaja päivittää nykyisen asennuksen. Musiikkikansio ja asetukset säilyvät.
+
+Päivitystä ei asenneta huomaamatta. Tarkistussumma varmistaa tiedoston eheyden; julkaisuja ei ole digitaalisesti allekirjoitettu. Päivitys sisältää myös mukana toimitetut latausmoottorit, joita ei päivitetä erikseen sovelluksesta. Portable-version käyttäjälle päivitys avaa tavallisen asentajan.
+
+## Ongelmatilanteet
+
+| Ongelma | Ratkaisu |
+|---|---|
+| Artisti ei löydy | Tarkista kirjoitusasu tai käytä suoraa albumilinkkiä. |
+| Spotify-artistihaku epäonnistuu | Käytä albumi- tai kappalelinkkiä. Katso yllä oleva tunnettu rajoitus. |
+| Kappale jää lataamatta | Katso loki. Sisältö voi olla poistettu, alueella estetty tai vaatia kirjautumisen, jota tämä versio ei tue. |
+| Puuttuva työkalu | Asenna sovellus uudelleen tai pura portable-paketti kokonaan. |
+| Päivitystarkistus epäonnistuu | Tarkista verkkoyhteys ja kokeile myöhemmin. Asentajan voi ladata myös GitHub Releasesista. |
+| Julkaisuja puuttuu | Tarkista **Myös singlet ja EP:t** ja hae uudelleen. Palvelun valikoima voi silti olla puutteellinen. |
+| Kansiot eivät näy uusimmat ensin | Käytä kansiomuotoa **Vuosi - Albumi** ja Resurssienhallinnan lajittelua **Nimi, laskeva**. |
+
+Ongelmailmoituksessa kerro sovelluksen versio, valittu lähde, ongelmaan johtaneet vaiheet ja tarvittava osa lokista. Älä lähetä salasanoja, evästeitä tai kirjautumistietoja.
+
+## Asetukset ja poistaminen
+
+Asetukset ovat tiedostossa `%LOCALAPPDATA%\Albumilataaja\settings.json`. Latausmoottorit voivat käyttää myös omia välimuistejaan käyttäjäprofiilissa.
+
+Poista asennus Windowsin **Asetukset → Sovellukset → Asennetut sovellukset → Albumilataaja → Poista asennus** -toiminnolla. Musiikkikansio ja käyttäjän asetukset säilyvät. Portable-version voi poistaa poistamalla puretun sovelluskansion; säilytä musiikki erillisessä kansiossa.
 
 ## Kehitys ja julkaiseminen
 
-Lähdekoodi on `lahdekoodi/`-kansiossa. Katso sen `build.ps1`. Työkalut ladataan lukituista julkaisuista ja niiden SHA-256 tarkistetaan. `v1.0.1`-tyyppisen Git-tagin julkaiseminen käynnistää GitHub Actionsin, joka testaa, paketoi ja julkaisee uuden asentajan ja tarkistussummat. Päivitä ensin `VERSION` tiedostossa `app.py`.
+Lähdekoodi on `lahdekoodi/`-kansiossa. Rakentaminen vaatii Windowsin, Python 3.14:n ja Inno Setup 6/7:n. Aja projektin juuresta PowerShellissä:
 
-Ensimmäisen version varmennetut testit ja rajoitukset ovat GitHub-julkaisun kuvauksessa.
+```powershell
+./lahdekoodi/build.ps1
+# Tarvittaessa kääntäjän polku:
+./lahdekoodi/build.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+```
 
-## Palvelukohtaiset rajoitukset
+Skripti asentaa Python-riippuvuudet, ajaa testit, lataa lukitut taustatyökalut ja tarkistaa niiden SHA-256:t sekä rakentaa `dist/`-kansioon asentajan, portable-paketin ja tarkistussummat. Versiot ja latausosoitteet ovat tiedostossa `lahdekoodi/tools-lock.json`. Kolmansien osapuolten lisenssit ja lähteet on kuvattu tiedostossa [THIRD_PARTY.md](THIRD_PARTY.md).
 
-YouTube-artistihaku ja FLAC-lataus sekä spotDL:n Spotify-kappalelinkin FLAC-lataus on testattu. Spotify-artistin nimihaku ei palauttanut testissä tulosta, ja koko artistin metatietojen haku aikakatkaistiin. Ominaisuus näyttää virheen ja sen voi keskeyttää; käytä tarvittaessa albumi- tai kappalelinkkejä. Spotify-palvelun muutokset voivat vaikuttaa spotDL:n toimintaan.
+Uutta versiota varten päivitä `VERSION` tiedostossa `lahdekoodi/app.py` ja julkaise vastaava Git-tagi, esimerkiksi `v1.0.1`. GitHub Actions testaa ja paketoi sovelluksen sekä julkaisee asentajan, portable-paketin ja tarkistussummat. Pysyvä AppId mahdollistaa päivityksen nykyisen asennuksen paikalle. Sovelluksen päivitystarkistus käyttää uusinta vakaata GitHub-julkaisua.

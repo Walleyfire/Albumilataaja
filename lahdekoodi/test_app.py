@@ -11,6 +11,7 @@ class AppTests(unittest.TestCase):
     def test_album_folders_and_order(self):
         self.assertEqual(app.album_folder('Albumi','2026-11-10'),'2026 - Albumi')
         self.assertEqual(app.album_folder('Albumi',None),'Albumi')
+        self.assertEqual(app.album_folder('Albumi','2026','Albumi, Vuosi'),'Albumi, 2026')
         data=[{'title':'Old','year':1999},{'title':'Unknown'},{'title':'New','year':'2026'}]
         self.assertEqual([a['title'] for a in app.newest_first(data)],['New','Old','Unknown'])
     def test_output_stays_below_destination(self):

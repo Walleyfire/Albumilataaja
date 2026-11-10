@@ -34,8 +34,9 @@ def release_year(value):
     match=re.search(r'\b((?:19|20)\d{2})\b',str(value or ''))
     return match.group(1) if match else ''
 
-def album_folder(title,year):
+def album_folder(title,year,layout='Vuosi - Albumi'):
     year=release_year(year)
+    if layout=='Albumi, Vuosi': return safe_name(title+(', '+year if year else ''))
     return safe_name((year+' - ' if year else '')+title)
 
 def newest_first(albums):
@@ -58,10 +59,11 @@ def spotify_url(value):
         raise ValueError('Liitä Spotify-artistin, albumin, soittolistan tai kappaleen https://open.spotify.com/…-linkki.')
     return value
 
-def spot_command(url, root, fmt):
+def spot_command(url, root, fmt,layout='Vuosi - Albumi'):
+    album='{album}, {year}' if layout=='Albumi, Vuosi' else '{year} - {album}'
     return [str(TOOLS/'spotdl.exe'), 'download', spotify_url(url), '--headless',
             '--ffmpeg', str(TOOLS/'ffmpeg.exe'), '--format', fmt, '--threads', '2',
-            '--output', str(root/'{album-artist}'/'{year} - {album}'/'{disc-number}-{track-number} - {title}.{output-ext}'),
+            '--output', str(root/'{album-artist}'/album/'{disc-number}-{track-number} - {title}.{output-ext}'),
             '--overwrite', 'skip', '--archive', str(root/('.spotdl-archive-'+fmt+'.txt')),
             '--simple-tui', '--print-errors', '--max-retries', '3',
             '--max-filename-length', '170', '--yt-dlp-args',
@@ -91,6 +93,7 @@ class App(tk.Tk):
         self.query = tk.StringVar(); self.artist_choice = tk.StringVar(); self.direct = tk.StringVar()
         self.format = tk.StringVar(value=settings.get('format','flac')); self.singles = tk.BooleanVar(value=True)
         self.source = tk.StringVar(value=settings.get('source','YouTube'))
+        self.layout = tk.StringVar(value=settings.get('layout','Albumi, Vuosi'))
         self.status = tk.StringVar(value='Hae artisti tai liitä YouTube-soittolistan linkki.')
         s=ttk.Style(self); s.theme_use('clam')
         s.configure('.', font=('Segoe UI',10), background='#101827', foreground='#e5eaf3')
@@ -128,7 +131,7 @@ class App(tk.Tk):
         self.tree.pack(side='left',fill='both',expand=True)
         scrollbar=ttk.Scrollbar(tree_frame,orient='vertical',command=self.tree.yview); scrollbar.pack(side='right',fill='y')
         self.tree.configure(yscrollcommand=scrollbar.set)
-        ttk.Label(outer,text='Uusimmat ensin • kansiot: Artisti / Vuosi - Albumi. Ctrl ja Shift toimivat monivalinnassa.',foreground='#9bacbf').pack(anchor='w',pady=(4,8))
+        ttk.Label(outer,text='Uusimmat ensin • valitse kansiomuoto alhaalta. Ctrl ja Shift toimivat monivalinnassa.',foreground='#9bacbf').pack(anchor='w',pady=(4,8))
         link=ttk.Frame(outer); link.pack(fill='x')
         ttk.Entry(link,textvariable=self.direct).pack(side='left',fill='x',expand=True)
         self.link_btn=ttk.Button(link,text='Lataa linkistä',command=self.download_link); self.link_btn.pack(side='left',padx=(8,0))
@@ -141,6 +144,8 @@ class App(tk.Tk):
         actions=ttk.Frame(outer); actions.pack(fill='x',pady=12)
         ttk.Label(actions,text='Muoto  ').pack(side='left')
         ttk.Combobox(actions,textvariable=self.format,values=['flac','opus','mp3','m4a'],state='readonly',width=7).pack(side='left')
+        ttk.Label(actions,text='   Kansiomuoto  ').pack(side='left')
+        ttk.Combobox(actions,textvariable=self.layout,values=['Albumi, Vuosi','Vuosi - Albumi'],state='readonly',width=17).pack(side='left')
         self.download_btn=ttk.Button(actions,text='Lataa valitut julkaisut',command=self.download_selected); self.download_btn.pack(side='left',padx=12)
         self.stop_btn=ttk.Button(actions,text='Keskeytä',command=self.stop,state='disabled'); self.stop_btn.pack(side='left')
         ttk.Label(outer,text='FLAC-tallennus ei paranna YouTuben alkuperäistä äänenlaatua.',foreground='#9bacbf').pack(anchor='w')
@@ -258,7 +263,7 @@ class App(tk.Tk):
             p=Path(self.destination.get()).expanduser(); p.mkdir(parents=True,exist_ok=True); os.startfile(p)
         except OSError as e: messagebox.showerror('Kansio',str(e))
     def save_settings(self):
-        CONFIG.write_text(json.dumps({'destination':self.destination.get(),'format':self.format.get(),'source':self.source.get()},ensure_ascii=False),encoding='utf-8')
+        CONFIG.write_text(json.dumps({'destination':self.destination.get(),'format':self.format.get(),'source':self.source.get(),'layout':self.layout.get()},ensure_ascii=False),encoding='utf-8')
     def download_selected(self):
         items=[dict(self.albums[int(i)]) for i in self.tree.selection()]
         if not items: messagebox.showinfo('Valitse julkaisut','Valitse ensin vähintään yksi julkaisu.'); return
@@ -276,7 +281,7 @@ class App(tk.Tk):
             urls=[spotify_url(u) for u in urls] if urls else [spotify_url(self.direct.get().strip())]
             root=Path(self.destination.get()).expanduser().resolve()
         except ValueError as e: messagebox.showerror('Linkki',str(e)); return
-        fmt=self.format.get(); self.save_settings()
+        fmt=self.format.get(); layout=self.layout.get(); self.save_settings()
         def work():
             root.mkdir(parents=True,exist_ok=True)
             for name in ['spotdl.exe','ffmpeg.exe','ffprobe.exe','deno.exe']:
@@ -286,7 +291,7 @@ class App(tk.Tk):
             for i,url in enumerate(urls,1):
                 if self.cancel.is_set(): break
                 self.emit('status',f'spotDL: {i}/{len(urls)} • haetaan ja ladataan kappaleita…')
-                result=self.execute(spot_command(url,root,fmt))
+                result=self.execute(spot_command(url,root,fmt,layout))
                 errors=errors or bool(result) or self.download_errors
             if self.cancel.is_set(): self.emit('status','Keskeytetty. Valmiit kappaleet säilyvät.')
             elif errors: self.emit('status','spotDL ilmoitti virheistä. Katso loki ja yritä tarvittaessa uudelleen.')
@@ -296,7 +301,7 @@ class App(tk.Tk):
         if self.busy: return
         missing=[name for name in ['yt-dlp.exe','ffmpeg.exe','ffprobe.exe','deno.exe'] if not (TOOLS/name).exists()]
         if missing: messagebox.showerror('Puuttuvia tiedostoja','Asenna sovellus uudelleen: '+', '.join(missing)); return
-        root=Path(self.destination.get()).expanduser().resolve(); fmt=self.format.get(); self.save_settings()
+        root=Path(self.destination.get()).expanduser().resolve(); fmt=self.format.get(); layout=self.layout.get(); self.save_settings()
         def work():
             y=YTMusic(); failures=0
             for number,item in enumerate(items,1):
@@ -314,7 +319,7 @@ class App(tk.Tk):
                         if not playlist: raise ValueError('Albumin soittolistaa ei löytynyt: '+item['title'])
                         url='https://www.youtube.com/playlist?list='+playlist
                         name=item['title']; owner=artist; year=item.get('year') or details.get('year')
-                    folder=root/safe_name(owner)/album_folder(name,year); folder.mkdir(parents=True,exist_ok=True)
+                    folder=root/safe_name(owner)/album_folder(name,year,layout); folder.mkdir(parents=True,exist_ok=True)
                     self.emit('status',f'{number}/{len(items)} • {name}'); self.emit('log','Ladataan: '+str(folder))
                     code=self.execute(command(url,folder,fmt))
                     if code and not self.cancel.is_set(): failures+=1; self.emit('log','Julkaisuun jäi virheitä. Tarkista yllä olevat tiedot ja yritä uudelleen.')
