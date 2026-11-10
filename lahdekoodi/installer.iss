@@ -42,6 +42,7 @@ Source: "{#PackageDir}\tools\*"; DestDir: "{app}\tools"; Flags: ignoreversion re
 Source: "{#PackageDir}\licenses\*"; DestDir: "{app}\licenses"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#PackageDir}\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PackageDir}\THIRD_PARTY.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PackageDir}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]
 Name: "{group}\Albumilataaja"; Filename: "{app}\Albumilataaja.exe"
 Name: "{autodesktop}\Albumilataaja"; Filename: "{app}\Albumilataaja.exe"; Tasks: desktopicon

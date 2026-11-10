@@ -13,7 +13,7 @@ if ($LASTEXITCODE) { throw 'Tool download failed' }
 python -m PyInstaller --noconfirm --clean --windowed --onefile --name Albumilataaja --icon (Join-Path $source 'app.ico') --add-data "$(Join-Path $source 'app.ico');." --distpath $package --workpath (Join-Path $repo 'build') --specpath (Join-Path $repo 'build') --collect-all ytmusicapi (Join-Path $source 'app.py')
 if ($LASTEXITCODE) { throw 'Application build failed' }
 Copy-Item -LiteralPath (Join-Path $repo 'licenses') -Destination $package -Recurse -Force
-Copy-Item -LiteralPath (Join-Path $repo 'README.md'),(Join-Path $repo 'THIRD_PARTY.md') -Destination $package -Force
+Copy-Item -LiteralPath (Join-Path $repo 'README.md'),(Join-Path $repo 'THIRD_PARTY.md'),(Join-Path $repo 'LICENSE') -Destination $package -Force
 $versionLine = Select-String -LiteralPath (Join-Path $source 'app.py') -Pattern "^VERSION = '([0-9.]+)'"
 $appVersion = $versionLine.Matches[0].Groups[1].Value
 if (-not $Iscc) {
