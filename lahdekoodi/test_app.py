@@ -57,14 +57,22 @@ class AppTests(unittest.TestCase):
             with tempfile.TemporaryDirectory() as tmp:
                 digest=hashlib.sha256(payload).hexdigest() if valid else '0'*64
                 responses=[Response(digest+'  Albumilataaja-Setup.exe'),Response()]
-                with patch.object(app.messagebox,'askyesno',return_value=True),patch.object(app.requests,'get',side_effect=responses),patch.object(app.tempfile,'mkdtemp',return_value=tmp),patch.object(app.os,'startfile') as launch:
+                with patch.object(app.messagebox,'askyesno',return_value=True),patch.object(app.requests,'get',side_effect=responses),patch.object(app.tempfile,'mkdtemp',return_value=tmp),patch.object(app.subprocess,'Popen') as launch:
                     if valid:
                         app.App.offer_update(fake,release)
                         launch.assert_called_once()
-                        self.assertEqual(Path(launch.call_args.args[0]).read_bytes(),payload)
+                        args=launch.call_args.args[0]
+                        self.assertEqual(Path(args[0]).read_bytes(),payload)
+                        self.assertIn('/UPDATEAPP=1',args)
                     else:
                         with self.assertRaises(ValueError): app.App.offer_update(fake,release)
                         launch.assert_not_called()
                         self.assertFalse((Path(tmp)/'Albumilataaja-Setup.exe').exists())
+
+    def test_update_can_be_declined(self):
+        fake=SimpleNamespace(busy=False)
+        with patch.object(app.messagebox,'askyesno',return_value=False),patch.object(app.requests,'get') as network,patch.object(app.subprocess,'Popen') as launch:
+            app.App.offer_update(fake,{'tag_name':'v9.0.0'})
+            network.assert_not_called(); launch.assert_not_called()
 
 if __name__=='__main__': unittest.main()

@@ -96,11 +96,11 @@ Paina **Keskeytä** pysäyttääksesi toiminnon. Valmiit kappaleet säilyvät. K
 ## Päivitykset
 
 1. Sovellus tarkistaa uusimman vakaan GitHub-julkaisun käynnistyessään. Voit tarkistaa myös painikkeella **Tarkista päivitykset**.
-2. Jos uusi versio löytyy, sovellus kysyy, ladataanko ja avataanko asentaja.
+2. Jos uusi versio löytyy, sovellus kysyy, päivitetäänkö nyt. Voit hyväksyä tai kieltäytyä. Kieltäytyessä nykyinen sovellus jää käyttöön ja seuraava käynnistys tarkistaa päivitykset uudelleen.
 3. Asentajan SHA-256 tarkistetaan julkaisun **SHA256SUMS.txt**-tiedostosta. Virheellistä latausta ei avata.
-4. Seuraa asentajan ohjeita. Asentaja päivittää nykyisen asennuksen. Musiikkikansio ja asetukset säilyvät.
+4. Hyväksytty päivitys asentuu automaattisesti, näyttää asennuksen edistymisen ja käynnistää sovelluksen uudelleen. Asennus tehdään samaan sovelluskansioon. Musiikkikansio ja asetukset säilyvät.
 
-Päivitystä ei asenneta huomaamatta. Tarkistussumma varmistaa tiedoston eheyden; julkaisuja ei ole digitaalisesti allekirjoitettu. Päivitys sisältää myös mukana toimitetut latausmoottorit, joita ei päivitetä erikseen sovelluksesta. Portable-version käyttäjälle päivitys avaa tavallisen asentajan.
+Päivitys asennetaan hyväksynnän jälkeen ilman asennusvelhon läpikäyntiä. Tarkistussumma varmistaa tiedoston eheyden; julkaisuja ei ole digitaalisesti allekirjoitettu. Päivitys sisältää myös mukana toimitetut latausmoottorit, joita ei päivitetä erikseen sovelluksesta. Portable-versiokin päivittyy nykyiseen kansioonsa asentajan kautta ja rekisteröityy Windowsiin asennetuksi sovellukseksi.
 
 ## Ongelmatilanteet
 

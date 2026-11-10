@@ -206,7 +206,8 @@ class App(tk.Tk):
                     self.artist_choice.set(self.artist)
                     self.status.set(f'{self.artist}: {len(self.albums)} julkaisua. Valitse haluamasi tai Valitse kaikki.')
                 elif kind=='update': self.offer_update(data)
-                elif kind=='current': messagebox.showinfo('Päivitykset','Käytössä on uusin versio ('+VERSION+').')
+                elif kind=='current': messagebox.showinfo('Päivitykset','Sovellus on ajan tasalla.')
+                elif kind=='exit_for_update': self.save_settings(); self.destroy(); return
         except queue.Empty: pass
         self.after(100,self.poll)
     def search(self):
@@ -378,8 +379,8 @@ class App(tk.Tk):
                 if manual: self.emit('error','Päivitysten tarkistus epäonnistui: '+str(e))
         threading.Thread(target=work,daemon=True).start()
     def offer_update(self,release):
-        if self.busy: self.log_line('Uusi versio saatavilla: '+release['tag_name']+'. Tarkista päivitykset latausten jälkeen.'); return
-        if not messagebox.askyesno('Päivitys saatavilla',f"Versio {release['tag_name']} on saatavilla. Ladataanko ja avataanko asentaja?"): return
+        if self.busy: self.log_line('Uusi päivitys on saatavilla. Tarkista päivitykset latausten jälkeen.'); return
+        if not messagebox.askyesno('Päivitys saatavilla','Uusi päivitys on saatavilla. Päivitetäänkö nyt automaattisesti?\n\nKyllä = päivitä ja käynnistä uudelleen.\nEi = jatka nykyisellä sovelluksella.'): return
         def work():
             assets={a['name']:a for a in release.get('assets',[])}
             installer=assets.get('Albumilataaja-Setup.exe'); checks=assets.get('SHA256SUMS.txt')
@@ -398,7 +399,8 @@ class App(tk.Tk):
                         if self.cancel.is_set(): raise RuntimeError('Päivityksen lataus keskeytetty.')
                         if block: f.write(block); h.update(block)
             if h.hexdigest()!=expected.lower(): dest.unlink(); raise ValueError('Päivityksen tarkistussumma ei täsmää.')
-            os.startfile(dest); self.emit('status','Asentaja avattu. Se päivittää nykyisen asennuksen.')
+            subprocess.Popen([str(dest),'/SILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/CLOSEAPPLICATIONS','/UPDATEAPP=1','/DIR='+str(BASE)],creationflags=NO_WINDOW)
+            self.emit('exit_for_update',None)
         self.run_job(work)
 
 if __name__=='__main__':

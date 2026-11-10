@@ -30,6 +30,7 @@ CloseApplications=yes
 CloseApplicationsFilter=Albumilataaja.exe
 RestartApplications=no
 UninstallDisplayIcon={app}\Albumilataaja.exe
+SetupIconFile=app.ico
 SetupLogging=yes
 [Languages]
 Name: "finnish"; MessagesFile: "compiler:Languages\Finnish.isl"
@@ -47,4 +48,10 @@ Source: "{#PackageDir}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Name: "{group}\Albumilataaja"; Filename: "{app}\Albumilataaja.exe"
 Name: "{autodesktop}\Albumilataaja"; Filename: "{app}\Albumilataaja.exe"; Tasks: desktopicon
 [Run]
-Filename: "{app}\Albumilataaja.exe"; Description: "Käynnistä Albumilataaja"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\Albumilataaja.exe"; Description: "Käynnistä Albumilataaja"; Flags: nowait postinstall skipifsilent; Check: not IsUpdateMode
+Filename: "{app}\Albumilataaja.exe"; Flags: nowait; Check: IsUpdateMode
+[Code]
+function IsUpdateMode: Boolean;
+begin
+  Result := ExpandConstant('{param:UPDATEAPP|0}') = '1';
+end;
