@@ -1,0 +1,26 @@
+[
+  {
+    "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2026.10.26/yt-dlp.exe",
+    "sha256": "f5389d3698ecde4ef06f4e6b1ce0294fe9ac1396228c8990b8d3416d6d177a7d",
+    "filename": "yt-dlp.exe",
+    "target": "yt-dlp.exe"
+  },
+  {
+    "url": "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/autobuild-2026-11-09-23-32/ffmpeg-N-128718-gb2b543c079-win64-gpl.zip",
+    "sha256": "9698c9ce1203df59f19d11c358ab269a8ab7806ec89f0af39b04100057f57e0d",
+    "filename": "ffmpeg.zip",
+    "target": null
+  },
+  {
+    "url": "https://github.com/denoland/deno/releases/download/v2.9.8/deno-x86_64-pc-windows-msvc.zip",
+    "sha256": "cba84b26e0df5ae7f74fc66b86a95b866872a86292ebd84fa1e959927edd93bf",
+    "filename": "deno.zip",
+    "target": null
+  },
+  {
+    "url": "https://github.com/spotDL/spotify-downloader/releases/download/v4.6.0/spotdl-4.6.0-win32.exe",
+    "sha256": "e674030c3337cd74120a3a086887ce1a5195765cfc17e1971a2807e0a398b505",
+    "filename": "spotdl.exe",
+    "target": "spotdl.exe"
+  }
+]

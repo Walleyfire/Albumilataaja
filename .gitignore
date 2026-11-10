@@ -1,0 +1,9 @@
+tools/
+*.exe
+*.zip
+__pycache__/
+*.pyc
+build/
+dist/
+tool-downloads/
+*.spec
