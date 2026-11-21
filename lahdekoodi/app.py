@@ -19,7 +19,7 @@ import webbrowser
 import requests
 from ytmusicapi import YTMusic
 
-VERSION = '1.1.2'
+VERSION = '1.1.3'
 REPOSITORY = 'Walleyfire/Albumilataaja'
 BASE = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
 TOOLS = BASE / 'tools'
@@ -72,8 +72,7 @@ def spot_command(url, root, fmt,layout='Vuosi - Albumi',cookie_file=''):
             '--output', str(root/'{album-artist}'/album/'{disc-number}-{track-number} - {title}.{output-ext}'),
             '--overwrite', 'skip', '--archive', str(root/('.spotdl-archive-'+fmt+'.txt')),
             '--simple-tui', '--print-errors', '--max-retries', '3',
-            '--max-filename-length', '170', '--yt-dlp-args',
-            '--sleep-interval 5 --max-sleep-interval 10 --js-runtimes '+json.dumps('deno:'+str(TOOLS/'deno.exe'))]
+            '--max-filename-length', '170']
 
 def command(url, folder, fmt,cookie_file=''):
     return [str(TOOLS/'yt-dlp.exe'), '--ignore-config', '--no-color', '--newline',
@@ -382,7 +381,7 @@ class App(ctk.CTk):
                         self.emit('log','YouTube pyytää kirjautumista tai manuaalista varmistusta. Jono pysäytettiin.')
                         subprocess.run(['taskkill','/PID',str(p.pid),'/T','/F'],capture_output=True,creationflags=NO_WINDOW)
                         break
-                    if re.search(r'\b(error|failed|exception)\b',line,re.I): self.download_errors=True
+                    if re.search(r'\b(error|failed|exception)\b|\b\w*(?:Error|Exception):',line,re.I): self.download_errors=True
                     internal_progress=tracking and self.queue_tracker.consume(line)
                     if line and not internal_progress: self.emit('log',line)
                     if self.cancel.is_set(): break

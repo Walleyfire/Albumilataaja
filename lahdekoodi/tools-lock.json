@@ -16,11 +16,5 @@
     "sha256": "cba84b26e0df5ae7f74fc66b86a95b866872a86292ebd84fa1e959927edd93bf",
     "filename": "deno.zip",
     "target": null
-  },
-  {
-    "url": "https://github.com/spotDL/spotify-downloader/releases/download/v4.6.0/spotdl-4.6.0-win32.exe",
-    "sha256": "e674030c3337cd74120a3a086887ce1a5195765cfc17e1971a2807e0a398b505",
-    "filename": "spotdl.exe",
-    "target": "spotdl.exe"
   }
 ]

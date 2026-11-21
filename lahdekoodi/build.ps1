@@ -10,6 +10,10 @@ python -m unittest discover -s $source -v
 if ($LASTEXITCODE) { throw 'Tests failed' }
 python (Join-Path $source 'fetch_tools.py') (Join-Path $package 'tools')
 if ($LASTEXITCODE) { throw 'Tool download failed' }
+python -m PyInstaller --noconfirm --clean --console --onefile --name spotdl --distpath (Join-Path $package 'tools') --workpath (Join-Path $repo 'build-spotify') --specpath (Join-Path $repo 'build-spotify') --collect-all spotdl --collect-all ytmusicapi --collect-all pykakasi --collect-all curl_cffi (Join-Path $source 'spotify_worker.py')
+if ($LASTEXITCODE) { throw 'Spotify worker build failed' }
+& (Join-Path $package 'tools\spotdl.exe') --self-test
+if ($LASTEXITCODE) { throw 'Spotify worker dependency check failed' }
 python -m PyInstaller --noconfirm --clean --console --onefile --name catalog --distpath (Join-Path $package 'tools') --workpath (Join-Path $repo 'build-catalog') --specpath (Join-Path $repo 'build-catalog') --collect-all spotapi --collect-all curl_cffi (Join-Path $source 'spotify_catalog.py')
 if ($LASTEXITCODE) { throw 'Catalog worker build failed' }
 & (Join-Path $package 'tools\catalog.exe') --self-test
@@ -17,6 +21,8 @@ if ($LASTEXITCODE) { throw 'Catalog worker dependency check failed' }
 python -m PyInstaller --noconfirm --clean --windowed --onefile --name Albumilataaja --icon (Join-Path $source 'app.ico') --add-data "$(Join-Path $source 'app.ico');." --distpath $package --workpath (Join-Path $repo 'build') --specpath (Join-Path $repo 'build') --collect-all ytmusicapi --collect-all customtkinter (Join-Path $source 'app.py')
 if ($LASTEXITCODE) { throw 'Application build failed' }
 Copy-Item -LiteralPath (Join-Path $repo 'licenses') -Destination $package -Recurse -Force
+python (Join-Path $source 'package_notices.py') (Join-Path $package 'licenses\python-dependencies.txt')
+if ($LASTEXITCODE) { throw 'Dependency notices failed' }
 Copy-Item -LiteralPath (Join-Path $repo 'README.md'),(Join-Path $repo 'THIRD_PARTY.md'),(Join-Path $repo 'LICENSE') -Destination $package -Force
 $versionLine = Select-String -LiteralPath (Join-Path $source 'app.py') -Pattern "^VERSION = '([0-9.]+)'"
 $appVersion = $versionLine.Matches[0].Groups[1].Value

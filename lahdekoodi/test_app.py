@@ -8,6 +8,12 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 class AppTests(unittest.TestCase):
+    def test_spotdl_error_is_failure_even_when_engine_exits_zero(self):
+        process=SimpleNamespace(stdout=iter(['AudioProviderError: Äänenlataaja palautti virheellisen vastauksen.\n']),wait=lambda:0)
+        target=SimpleNamespace(cancel=threading.Event(),emit=lambda *args:None)
+        with patch.object(app.subprocess,'Popen',return_value=process):
+            self.assertEqual(app.App.execute(target,['spotdl.exe']),0)
+        self.assertTrue(target.download_errors)
     def test_album_folders_and_order(self):
         self.assertEqual(app.album_folder('Albumi','2026-11-10'),'2026 - Albumi')
         self.assertEqual(app.album_folder('Albumi',None),'Albumi')

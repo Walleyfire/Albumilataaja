@@ -1,5 +1,6 @@
 requests==2.33.0
-ytmusicapi==1.12.3
+ytmusicapi==1.12.4
 pyinstaller==6.22.3
 spotapi[websocket,pymongo,redis]==1.2.8
 customtkinter==6.0.0
+spotdl==4.6.0

@@ -116,6 +116,10 @@ Päivitys asennetaan hyväksynnän jälkeen ilman asennusvelhon läpikäyntiä. 
 
 ## Ongelmatilanteet
 
+### Spotify: AudioProviderError / YT-DLP download error
+
+Päivitä sovellus vähintään versioon 1.1.3. Spotify käyttää spotDL:ää kappaleiden kohdistamiseen, metatietoihin ja albumikansioihin, mutta hakee äänen samalla mukana toimitetulla yt-dlp-ohjelmalla ja Deno-asetuksilla kuin YouTube-puoli. YouTube Musicin löytämä video avataan tavallisena YouTube-videona. Tarkka latausvirhe näkyy nyt lokissa; kirjautumispyyntö pysäyttää jonon myös Spotify-tilassa. Pelkkä SABR-varoitus ei tarkoita latauksen epäonnistumista, jos toinen saatavilla oleva äänimuoto toimii.
+
 ### YouTube: Sign in to confirm you're not a bot
 
 Tämä on YouTuben kirjautumis- tai varmistuspyyntö. Pelkkä **No title found** on metatietovaroitus; varsinainen latauksen estävä virhe on kirjautumis-/bottivarmistuspyyntö.
@@ -159,4 +163,4 @@ Lähdekoodi on `lahdekoodi/`-kansiossa. Rakentaminen vaatii Windowsin, Python 3.
 
 Skripti asentaa Python-riippuvuudet, ajaa testit, lataa lukitut taustatyökalut ja tarkistaa niiden SHA-256:t sekä rakentaa `dist/`-kansioon asentajan, portable-paketin ja tarkistussummat. Versiot ja latausosoitteet ovat tiedostossa `lahdekoodi/tools-lock.json`. Kolmansien osapuolten lisenssit ja lähteet on kuvattu tiedostossa [THIRD_PARTY.md](THIRD_PARTY.md).
 
-Uutta versiota varten päivitä `VERSION` tiedostossa `lahdekoodi/app.py` ja julkaise vastaava Git-tagi, esimerkiksi seuraavana korjauspäivityksenä `v1.1.3`. GitHub Actions testaa ja paketoi sovelluksen sekä julkaisee asentajan, portable-paketin ja tarkistussummat. Pysyvä AppId mahdollistaa päivityksen nykyisen asennuksen paikalle. Sovelluksen päivitystarkistus käyttää uusinta vakaata GitHub-julkaisua.
+Uutta versiota varten päivitä `VERSION` tiedostossa `lahdekoodi/app.py` ja julkaise vastaava Git-tagi, esimerkiksi seuraavana korjauspäivityksenä `v1.1.4`. GitHub Actions testaa ja paketoi sovelluksen sekä julkaisee asentajan, portable-paketin ja tarkistussummat. Pysyvä AppId mahdollistaa päivityksen nykyisen asennuksen paikalle. Sovelluksen päivitystarkistus käyttää uusinta vakaata GitHub-julkaisua.
