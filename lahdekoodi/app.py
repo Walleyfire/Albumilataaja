@@ -13,12 +13,13 @@ from tkinter import ttk, filedialog, messagebox
 import customtkinter as ctk
 from appearance import build_interface, apply_theme
 from queue_progress import QueueProgress, PROGRESS, TRACK_DONE
+from youtube_session import validate_cookie_file, requires_youtube_auth, AUTH_HELP
 from urllib.parse import urlparse
 import webbrowser
 import requests
 from ytmusicapi import YTMusic
 
-VERSION = '1.1.0'
+VERSION = '1.1.1'
 REPOSITORY = 'Walleyfire/Albumilataaja'
 BASE = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
 TOOLS = BASE / 'tools'
@@ -63,18 +64,21 @@ def spotify_url(value):
         raise ValueError('Liitä Spotify-artistin, albumin, soittolistan tai kappaleen https://open.spotify.com/…-linkki.')
     return value
 
-def spot_command(url, root, fmt,layout='Vuosi - Albumi'):
+def spot_command(url, root, fmt,layout='Vuosi - Albumi',cookie_file=''):
     album='{album}, {year}' if layout=='Albumi, Vuosi' else '{year} - {album}'
     return [str(TOOLS/'spotdl.exe'), 'download', spotify_url(url), '--headless',
-            '--ffmpeg', str(TOOLS/'ffmpeg.exe'), '--format', fmt, '--threads', '2',
+            *(['--cookie-file',validate_cookie_file(cookie_file)] if cookie_file else []),
+            '--ffmpeg', str(TOOLS/'ffmpeg.exe'), '--format', fmt, '--threads', '1',
             '--output', str(root/'{album-artist}'/album/'{disc-number}-{track-number} - {title}.{output-ext}'),
             '--overwrite', 'skip', '--archive', str(root/('.spotdl-archive-'+fmt+'.txt')),
             '--simple-tui', '--print-errors', '--max-retries', '3',
             '--max-filename-length', '170', '--yt-dlp-args',
-            '--js-runtimes '+json.dumps('deno:'+str(TOOLS/'deno.exe'))]
+            '--sleep-interval 5 --max-sleep-interval 10 --js-runtimes '+json.dumps('deno:'+str(TOOLS/'deno.exe'))]
 
-def command(url, folder, fmt):
+def command(url, folder, fmt,cookie_file=''):
     return [str(TOOLS/'yt-dlp.exe'), '--ignore-config', '--no-color', '--newline',
+            *(['--cookies',validate_cookie_file(cookie_file)] if cookie_file else []),
+            '--sleep-interval','5','--max-sleep-interval','10',
             '--js-runtimes', 'deno:'+str(TOOLS/'deno.exe'), '--ffmpeg-location', str(TOOLS),
             '--windows-filenames', '--trim-filenames', '170', '--socket-timeout', '25',
             '--retries', '3', '--no-overwrites', '--yes-playlist', '-f', 'bestaudio/best',
@@ -104,6 +108,8 @@ class App(ctk.CTk):
         self.source=tk.StringVar(value=settings.get('source','YouTube'))
         self.layout=tk.StringVar(value=settings.get('layout','Albumi, Vuosi'))
         self.status=tk.StringVar(value='Hae artisti tai liitä valitun palvelun linkki.')
+        self.cookie_file=tk.StringVar(value=settings.get('youtube_cookie_file',''))
+        self.youtube_auth_required=False
         self.queue_summary=tk.StringVar(value=''); self.queue_tracker=QueueProgress()
         build_interface(self,settings,preview=PREVIEW)
         self.protocol('WM_DELETE_WINDOW',self.close); self.after(100,self.poll)
@@ -174,6 +180,7 @@ class App(ctk.CTk):
                 elif kind=='update': self.offer_update(data)
                 elif kind=='current': messagebox.showinfo('Päivitykset','Sovellus on ajan tasalla.')
                 elif kind=='exit_for_update': self.save_settings(); self.destroy(); return
+                elif kind=='youtube_auth': self.status.set('YouTube pyytää kirjautumista tai varmistusta. Jono pysäytetty.'); messagebox.showwarning('YouTube-kirjautuminen',AUTH_HELP)
         except queue.Empty: pass
         snapshot=self.queue_tracker.snapshot()
         if snapshot:
@@ -235,7 +242,24 @@ class App(ctk.CTk):
             p=Path(self.destination.get()).expanduser(); p.mkdir(parents=True,exist_ok=True); os.startfile(p)
         except OSError as e: messagebox.showerror('Kansio',str(e))
     def save_settings(self):
-        CONFIG.write_text(json.dumps({'destination':self.destination.get(),'format':self.format.get(),'source':self.source.get(),'layout':self.layout.get(),'show_console':self.console_visible},ensure_ascii=False),encoding='utf-8')
+        CONFIG.write_text(json.dumps({'destination':self.destination.get(),'format':self.format.get(),'source':self.source.get(),'layout':self.layout.get(),'show_console':self.console_visible,'youtube_cookie_file':self.cookie_file.get()},ensure_ascii=False),encoding='utf-8')
+    def choose_youtube_cookies(self):
+        if self.busy: return
+        path=filedialog.askopenfilename(title='Valitse itse viemäsi YouTube cookies.txt',filetypes=[('Netscape-evästeet','*.txt'),('Kaikki tiedostot','*.*')])
+        if not path: return
+        try: path=validate_cookie_file(path)
+        except ValueError as error: messagebox.showerror('YouTube-evästeet',str(error)); return
+        self.cookie_file.set(path); self.save_settings(); self.refresh_cookie_label()
+        self.status.set('Itse valittu YouTube-istunto otetaan käyttöön seuraavassa latauksessa.')
+    def clear_youtube_cookies(self):
+        if self.busy: return
+        self.cookie_file.set(''); self.save_settings(); self.refresh_cookie_label()
+        self.status.set('YouTube-istunnon valinta poistettiin. Alkuperäistä tiedostoa ei poistettu.')
+    def refresh_cookie_label(self):
+        self.cookie_label.configure(text='YouTube-istunto: valittu tiedosto' if self.cookie_file.get() else 'YouTube-istunto: ei käytössä')
+    def selected_cookies(self):
+        try: return validate_cookie_file(self.cookie_file.get())
+        except ValueError as error: messagebox.showerror('YouTube-evästeet',str(error)); return None
     def download_selected(self):
         items=[dict(self.albums[int(i)]) for i in self.tree.selection()]
         if not items: messagebox.showinfo('Valitse julkaisut','Valitse ensin vähintään yksi julkaisu.'); return
@@ -254,6 +278,8 @@ class App(ctk.CTk):
             root=Path(self.destination.get()).expanduser().resolve()
         except ValueError as e: messagebox.showerror('Linkki',str(e)); return
         fmt=self.format.get(); layout=self.layout.get(); include_singles=self.singles.get(); self.save_settings()
+        cookie_file=self.selected_cookies()
+        if cookie_file is None: return
         def work():
             root.mkdir(parents=True,exist_ok=True)
             for name in ['spotdl.exe','ffmpeg.exe','ffprobe.exe','deno.exe']:
@@ -277,7 +303,9 @@ class App(ctk.CTk):
                 if self.cancel.is_set(): break
                 self.queue_tracker.start_task(i-1)
                 self.emit('status',f'spotDL: {i}/{len(queue_urls)} • haetaan ja ladataan kappaleita…')
-                result=self.execute(spot_command(url,root,fmt,layout),tracking=True)
+                result=self.execute(spot_command(url,root,fmt,layout,cookie_file),tracking=True)
+                if self.youtube_auth_required:
+                    self.emit('youtube_auth',None); return
                 errors=errors or bool(result) or self.download_errors
                 if not self.cancel.is_set(): self.queue_tracker.finish_task(i-1,failed=bool(result) or self.download_errors)
             if self.cancel.is_set(): self.emit('status','Keskeytetty. Valmiit kappaleet säilyvät.')
@@ -289,6 +317,8 @@ class App(ctk.CTk):
         missing=[name for name in ['yt-dlp.exe','ffmpeg.exe','ffprobe.exe','deno.exe'] if not (TOOLS/name).exists()]
         if missing: messagebox.showerror('Puuttuvia tiedostoja','Asenna sovellus uudelleen: '+', '.join(missing)); return
         root=Path(self.destination.get()).expanduser().resolve(); fmt=self.format.get(); layout=self.layout.get(); self.save_settings()
+        cookie_file=self.selected_cookies()
+        if cookie_file is None: return
         def work():
             y=YTMusic(); failures=0
             self.queue_tracker.begin(len(items))
@@ -297,7 +327,7 @@ class App(ctk.CTk):
                 self.queue_tracker.start_task(number-1); task_failed=False
                 try:
                     if item.get('url'):
-                        url=item['url']; info=self.inspect_url(url)
+                        url=item['url']; info=self.inspect_url(url,cookie_file)
                         name=info.get('title') or 'YouTube'; owner=info.get('artist') or info.get('uploader') or info.get('channel') or 'YouTube'
                         year=info.get('release_year') or info.get('release_date')
                         entries=info.get('entries') or []
@@ -310,17 +340,22 @@ class App(ctk.CTk):
                         name=item['title']; owner=artist; year=item.get('year') or details.get('year')
                     folder=root/safe_name(owner)/album_folder(name,year,layout); folder.mkdir(parents=True,exist_ok=True)
                     self.emit('status',f'{number}/{len(items)} • {name}'); self.emit('log','Ladataan: '+str(folder))
-                    code=self.execute(command(url,folder,fmt),tracking=True)
+                    code=self.execute(command(url,folder,fmt,cookie_file),tracking=True)
+                    if self.youtube_auth_required:
+                        self.emit('youtube_auth',None); return
                     if code and not self.cancel.is_set(): task_failed=True; failures+=1; self.emit('log','Julkaisuun jäi virheitä. Tarkista yllä olevat tiedot ja yritä uudelleen.')
                 except Exception as e:
+                    if self.youtube_auth_required:
+                        self.emit('youtube_auth',None); return
                     if not self.cancel.is_set(): task_failed=True; failures+=1; self.emit('log',str(e))
                 finally:
-                    if not self.cancel.is_set(): self.queue_tracker.finish_task(number-1,failed=task_failed)
+                    if not self.cancel.is_set() and not self.youtube_auth_required: self.queue_tracker.finish_task(number-1,failed=task_failed)
             self.emit('status','Keskeytetty. Valmiit kappaleet säilyvät.' if self.cancel.is_set() else (f'Valmis. Virheitä {failures} julkaisussa — katso loki.' if failures else 'Valmis. Musiikki on tallennuskansiossa.'))
         self.run_job(work)
     def execute(self,args,capture=False,metadata=False,tracking=False):
         if self.cancel.is_set(): return '' if capture else 1
         self.download_errors=False
+        self.youtube_auth_required=False
         env=os.environ.copy(); env['PATH']=str(TOOLS)+os.pathsep+env.get('PATH',''); env['PYTHONIOENCODING']='utf-8'; env['NO_COLOR']='1'
         p=subprocess.Popen(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE if capture else subprocess.STDOUT,text=True,encoding='utf-8',errors='replace',creationflags=NO_WINDOW,env=env,cwd=STATE)
         self.proc=p
@@ -335,11 +370,17 @@ class App(ctk.CTk):
             if self.cancel.is_set(): p.terminate()
             if capture:
                 out,err=p.communicate()
+                if requires_youtube_auth(err): self.youtube_auth_required=True; raise RuntimeError('YouTube pyytää kirjautumista tai varmistusta.')
                 if timed_out.is_set(): raise RuntimeError('Linkin lukeminen aikakatkaistiin. Kokeile uudelleen.')
                 if p.returncode: raise RuntimeError(err[-1800:] or 'Linkin lukeminen epäonnistui.')
                 return out
             for line in p.stdout:
                 line=line.strip()
+                if requires_youtube_auth(line):
+                    self.youtube_auth_required=True; self.download_errors=True
+                    self.emit('log','YouTube pyytää kirjautumista tai manuaalista varmistusta. Jono pysäytettiin.')
+                    subprocess.run(['taskkill','/PID',str(p.pid),'/T','/F'],capture_output=True,creationflags=NO_WINDOW)
+                    break
                 if re.search(r'\b(error|failed|exception)\b',line,re.I): self.download_errors=True
                 internal_progress=tracking and self.queue_tracker.consume(line)
                 if line and not internal_progress: self.emit('log',line)
@@ -348,8 +389,9 @@ class App(ctk.CTk):
             if timed_out.is_set(): raise RuntimeError('Spotify-julkaisujen haku aikakatkaistiin. Voit kokeilla albumin suoraa linkkiä.')
             return code
         finally: finished.set(); self.proc=None
-    def inspect_url(self,url):
+    def inspect_url(self,url,cookie_file=''):
         args=[str(TOOLS/'yt-dlp.exe'),'--ignore-config','--flat-playlist','--playlist-items','1','--dump-single-json','--socket-timeout','25','--',url]
+        if cookie_file: args[1:1]=['--cookies',validate_cookie_file(cookie_file)]
         return json.loads(self.execute(args,True))
     def stop(self):
         self.cancel.set()

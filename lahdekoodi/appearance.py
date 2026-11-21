@@ -87,6 +87,12 @@ def build_interface(app,settings,preview=False):
     app.source_combo.pack(side='left')
     app.source_note=label(sources); app.source_note.pack(side='left',padx=18)
 
+    session=frame(outer); session.pack(fill='x',pady=(0,8))
+    app.cookie_label=label(session,'YouTube-istunto: valittu tiedosto' if app.cookie_file.get() else 'YouTube-istunto: ei käytössä',font=('Segoe UI',11))
+    app.cookie_label.pack(side='left')
+    button(session,'YouTube-evästeet',app.choose_youtube_cookies,width=145,height=28,font=('Segoe UI',11)).pack(side='right')
+    button(session,'Poista valinta',app.clear_youtube_cookies,width=110,height=28,font=('Segoe UI',11)).pack(side='right',padx=8)
+
     artist_panel=ctk.CTkFrame(outer,fg_color=PANEL,corner_radius=16); artist_panel.pack(fill='x')
     search=frame(artist_panel); search.pack(fill='x',padx=14,pady=(12,8))
     app.search_entry=entry(search,app.query,'Kirjoita artistin nimi'); app.search_entry.pack(side='left',fill='x',expand=True)

@@ -116,6 +116,19 @@ Päivitys asennetaan hyväksynnän jälkeen ilman asennusvelhon läpikäyntiä. 
 
 ## Ongelmatilanteet
 
+### YouTube: Sign in to confirm you're not a bot
+
+Tämä on YouTuben kirjautumis- tai varmistuspyyntö. Pelkkä **No title found** on metatietovaroitus; varsinainen latauksen estävä virhe on kirjautumis-/bottivarmistuspyyntö.
+
+1. Avaa YouTube itse selaimessa. Kirjaudu tarvittaessa ja tee YouTuben pyytämä varmistus itse.
+2. Jos lataus tarvitsee kirjautumisistunnon, vie itse selaimesta YouTuben evästeet Netscape-muotoiseen `cookies.txt`-tiedostoon. Katso yt-dlp:n [evästeohje](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp) ja [YouTube-kohtainen vientiohje](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies).
+3. Paina sovelluksessa **YouTube-evästeet** ja valitse tiedosto omalta koneeltasi. Valinta koskee sekä YouTube-latauksia että spotDL:n YouTubesta hakemaa ääntä.
+4. Käynnistä sama latausjono uudelleen. Valmiit kappaleet säilyvät ja ne ohitetaan lataushistorian perusteella.
+
+Sovellus ei lue selaimen profiilia tai vie evästeitä automaattisesti. Asetuksiin tallennetaan vain valitun tiedoston polku; latausmoottori käyttää sen evästeitä verkkopalvelun kirjautumispyynnöissä. **Älä lähetä evästetiedostoa chattiin, GitHubiin tai muille ihmisille:** se voi sisältää tilillesi pääsyn mahdollistavia tietoja. **Poista valinta** lopettaa tiedoston käytön poistamatta alkuperäistä tiedostoa.
+
+Evästeet voivat vanhentua eivätkä ne takaa latauksen onnistumista. YouTube voi rajoittaa pyyntöjä myös muista syistä. Latausjono pysähtyy varmistuspyyntöön, ja latausten välissä käytetään lyhyttä taukoa. Käytä kirjautumista vain tarvittaessa; yt-dlp:n ohje varoittaa tilin käyttöön liittyvistä rajoituksista.
+
 | Ongelma | Ratkaisu |
 |---|---|
 | Artisti ei löydy | Tarkista kirjoitusasu tai käytä suoraa albumilinkkiä. |
