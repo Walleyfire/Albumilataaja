@@ -13,13 +13,13 @@ from tkinter import ttk, filedialog, messagebox
 import customtkinter as ctk
 from appearance import build_interface, apply_theme
 from queue_progress import QueueProgress, PROGRESS, TRACK_DONE
-from youtube_session import validate_cookie_file, requires_youtube_auth, AUTH_HELP
+from youtube_session import validate_cookie_file, requires_youtube_auth, AUTH_HELP, isolated_cookie_arguments
 from urllib.parse import urlparse
 import webbrowser
 import requests
 from ytmusicapi import YTMusic
 
-VERSION = '1.1.1'
+VERSION = '1.1.2'
 REPOSITORY = 'Walleyfire/Albumilataaja'
 BASE = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
 TOOLS = BASE / 'tools'
@@ -354,41 +354,42 @@ class App(ctk.CTk):
         self.run_job(work)
     def execute(self,args,capture=False,metadata=False,tracking=False):
         if self.cancel.is_set(): return '' if capture else 1
-        self.download_errors=False
-        self.youtube_auth_required=False
-        env=os.environ.copy(); env['PATH']=str(TOOLS)+os.pathsep+env.get('PATH',''); env['PYTHONIOENCODING']='utf-8'; env['NO_COLOR']='1'
-        p=subprocess.Popen(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE if capture else subprocess.STDOUT,text=True,encoding='utf-8',errors='replace',creationflags=NO_WINDOW,env=env,cwd=STATE)
-        self.proc=p
-        finished=threading.Event(); timed_out=threading.Event()
-        if capture or metadata or 'save' in args[1:2]:
-            def watchdog():
-                if not finished.wait(180) and p.poll() is None:
-                    timed_out.set()
-                    subprocess.run(['taskkill','/PID',str(p.pid),'/T','/F'],capture_output=True,creationflags=NO_WINDOW)
-            threading.Thread(target=watchdog,daemon=True).start()
-        try:
-            if self.cancel.is_set(): p.terminate()
-            if capture:
-                out,err=p.communicate()
-                if requires_youtube_auth(err): self.youtube_auth_required=True; raise RuntimeError('YouTube pyytää kirjautumista tai varmistusta.')
-                if timed_out.is_set(): raise RuntimeError('Linkin lukeminen aikakatkaistiin. Kokeile uudelleen.')
-                if p.returncode: raise RuntimeError(err[-1800:] or 'Linkin lukeminen epäonnistui.')
-                return out
-            for line in p.stdout:
-                line=line.strip()
-                if requires_youtube_auth(line):
-                    self.youtube_auth_required=True; self.download_errors=True
-                    self.emit('log','YouTube pyytää kirjautumista tai manuaalista varmistusta. Jono pysäytettiin.')
-                    subprocess.run(['taskkill','/PID',str(p.pid),'/T','/F'],capture_output=True,creationflags=NO_WINDOW)
-                    break
-                if re.search(r'\b(error|failed|exception)\b',line,re.I): self.download_errors=True
-                internal_progress=tracking and self.queue_tracker.consume(line)
-                if line and not internal_progress: self.emit('log',line)
-                if self.cancel.is_set(): break
-            code=p.wait()
-            if timed_out.is_set(): raise RuntimeError('Spotify-julkaisujen haku aikakatkaistiin. Voit kokeilla albumin suoraa linkkiä.')
-            return code
-        finally: finished.set(); self.proc=None
+        with isolated_cookie_arguments(args) as args:
+            self.download_errors=False
+            self.youtube_auth_required=False
+            env=os.environ.copy(); env['PATH']=str(TOOLS)+os.pathsep+env.get('PATH',''); env['PYTHONIOENCODING']='utf-8'; env['NO_COLOR']='1'
+            p=subprocess.Popen(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE if capture else subprocess.STDOUT,text=True,encoding='utf-8',errors='replace',creationflags=NO_WINDOW,env=env,cwd=STATE)
+            self.proc=p
+            finished=threading.Event(); timed_out=threading.Event()
+            if capture or metadata or 'save' in args[1:2]:
+                def watchdog():
+                    if not finished.wait(180) and p.poll() is None:
+                        timed_out.set()
+                        subprocess.run(['taskkill','/PID',str(p.pid),'/T','/F'],capture_output=True,creationflags=NO_WINDOW)
+                threading.Thread(target=watchdog,daemon=True).start()
+            try:
+                if self.cancel.is_set(): p.terminate()
+                if capture:
+                    out,err=p.communicate()
+                    if requires_youtube_auth(err): self.youtube_auth_required=True; raise RuntimeError('YouTube pyytää kirjautumista tai varmistusta.')
+                    if timed_out.is_set(): raise RuntimeError('Linkin lukeminen aikakatkaistiin. Kokeile uudelleen.')
+                    if p.returncode: raise RuntimeError(err[-1800:] or 'Linkin lukeminen epäonnistui.')
+                    return out
+                for line in p.stdout:
+                    line=line.strip()
+                    if requires_youtube_auth(line):
+                        self.youtube_auth_required=True; self.download_errors=True
+                        self.emit('log','YouTube pyytää kirjautumista tai manuaalista varmistusta. Jono pysäytettiin.')
+                        subprocess.run(['taskkill','/PID',str(p.pid),'/T','/F'],capture_output=True,creationflags=NO_WINDOW)
+                        break
+                    if re.search(r'\b(error|failed|exception)\b',line,re.I): self.download_errors=True
+                    internal_progress=tracking and self.queue_tracker.consume(line)
+                    if line and not internal_progress: self.emit('log',line)
+                    if self.cancel.is_set(): break
+                code=p.wait()
+                if timed_out.is_set(): raise RuntimeError('Spotify-julkaisujen haku aikakatkaistiin. Voit kokeilla albumin suoraa linkkiä.')
+                return code
+            finally: finished.set(); self.proc=None
     def inspect_url(self,url,cookie_file=''):
         args=[str(TOOLS/'yt-dlp.exe'),'--ignore-config','--flat-playlist','--playlist-items','1','--dump-single-json','--socket-timeout','25','--',url]
         if cookie_file: args[1:1]=['--cookies',validate_cookie_file(cookie_file)]
