@@ -7,6 +7,7 @@ import time
 
 PROGRESS='__ALBUMILATAAJA_PROGRESS__'
 TRACK_DONE='__ALBUMILATAAJA_TRACK_DONE__'
+PARALLEL_PROGRESS='__ALBUMILATAAJA_PARALLEL__'
 
 def approximate_time(seconds):
     if seconds<60: return 'alle minuutti'
@@ -22,6 +23,7 @@ class QueueProgress:
         with self.lock:
             self.total=0; self.completed=0; self.failed=0; self.index=0
             self.fraction=0.; self.started=None; self.ended=None; self.active=False; self.cancelled=False
+            self.unit='julkaisua'; self.running=None
     def begin(self,total):
         with self.lock:
             self.reset(); self.total=max(0,int(total)); self.started=self.clock(); self.active=self.total>0
@@ -39,6 +41,20 @@ class QueueProgress:
         with self.lock:
             if self.active: self.active=False; self.ended=self.clock(); self.cancelled=cancelled
     def consume(self,line):
+        if line.startswith(PARALLEL_PROGRESS):
+            try:
+                data=json.loads(line[len(PARALLEL_PROGRESS):])
+                total=int(data['total']); completed=int(data['completed']); fraction=float(data['partial'])
+                failed=int(data['failed']); running=int(data['running'])
+                if total<1 or not 0<=completed<=total or not 0<=fraction<=total-completed or not 0<=failed<=completed or not 0<=running<=total-completed: raise ValueError()
+                with self.lock:
+                    self.total=total; self.completed=completed; self.fraction=fraction; self.failed=failed
+                    self.unit='tiedostoa'; self.running=running
+                    if self.started is None: self.started=self.clock()
+                    self.active=completed<total
+                    if not self.active: self.ended=self.clock()
+            except (ValueError,TypeError,KeyError): pass
+            return True
         if line.startswith((PROGRESS,TRACK_DONE)):
             try:
                 prefix=TRACK_DONE if line.startswith(TRACK_DONE) else PROGRESS
@@ -53,7 +69,7 @@ class QueueProgress:
             except (ValueError,TypeError,ZeroDivisionError): pass
             return True
         match=re.search(r'\b(\d+)\s*/\s*(\d+)\s+complete\b',line,re.I)
-        if match and int(match[2])>0: self.update(int(match[1])/int(match[2]))
+        if match and int(match[2])>0 and self.unit!='tiedostoa': self.update(int(match[1])/int(match[2]))
         return False
     def snapshot(self):
         with self.lock:
@@ -62,7 +78,8 @@ class QueueProgress:
             elapsed=max(0.,(self.ended if self.ended is not None else self.clock())-self.started)
             complete=self.completed>=self.total
             percent=100 if complete else min(99,int(fraction*100))
-            summary=f'Koko jono · {percent} % · {self.completed}/{self.total} julkaisua'
+            summary=f'Koko jono · {percent} % · {self.completed}/{self.total} {self.unit}'
+            if self.active and self.running is not None: summary+=f' · {self.running} käynnissä'
             eta=None
             if complete: summary+=' · '+('käsitelty, tarkista lokin virheet' if self.failed else 'valmis')
             elif not self.active: summary+=' · '+('keskeytetty' if self.cancelled else 'pysäytetty')

@@ -6,14 +6,14 @@ import tempfile
 
 
 @contextmanager
-def isolated_cookie_arguments(arguments):
+def isolated_cookie_arguments(arguments,temporary_root=None):
     """Give download engines a disposable cookie jar, never the user's export."""
     args=list(arguments)
     positions=[i+1 for i,arg in enumerate(args[:-1]) if arg in ('--cookies','--cookie-file')]
     if not positions:
         yield args
         return
-    with tempfile.TemporaryDirectory(prefix='Albumilataaja-session-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='Albumilataaja-session-',dir=temporary_root) as temporary:
         for number,position in enumerate(positions):
             source=validate_cookie_file(args[position])
             target=Path(temporary)/f'cookies-{number}.txt'

@@ -28,9 +28,9 @@ Asennus tapahtuu omaan käyttäjäprofiiliin ilman järjestelmänvalvojan oikeuk
 7. Valitse **Tallennuskansio**, **Muoto** ja **Kansiomuoto**.
 8. Paina **Lataa valitut julkaisut**. Edistyminen ja virheet näkyvät ikkunan alareunassa.
 
-**Suorat linkit:** liitä albumilistan alla olevaan moniriviseen kenttään yksi tai useampi YouTube-videon tai albumisoittolistan https-linkki, **yksi linkki riville**, ja paina **Lataa linkit**. Kaikki linkit käsitellään samassa jonossa syöttämässäsi järjestyksessä. Tyhjät rivit ja täsmälleen samat toistuvat linkit ohitetaan. Jos jokin rivi on virheellinen, korjaa ilmoitettu rivi ennen latauksen aloitusta.
+**Suorat linkit:** liitä albumilistan alla olevaan moniriviseen kenttään yksi tai useampi YouTube-videon tai albumisoittolistan https-linkki, **yksi linkki riville**, ja paina **Lataa linkit**. Linkit jonotetaan syöttämässäsi järjestyksessä. Rinnakkaislatauksissa kappaleet voivat valmistua eri järjestyksessä. Tyhjät rivit ja täsmälleen samat toistuvat linkit ohitetaan. Jos jokin rivi on virheellinen, korjaa ilmoitettu rivi ennen latauksen aloitusta.
 
-Linkit ladataan peräkkäin; jokaisen albumin tai videon musiikki tallennetaan valitun kansiomuodon mukaisesti. Latauspalkki ja aika-arvio koskevat koko linkkijonoa. Myös Spotify-tilassa voit liittää useita sen palvelun linkkejä yksi riville.
+Kappaleita ladataan valitsemasi samanaikaisuuden mukaan; jokaisen albumin tai videon musiikki tallennetaan valitun kansiomuodon mukaisesti. Latauspalkki ja aika-arvio koskevat koko linkkijonoa. Myös Spotify-tilassa voit liittää useita sen palvelun linkkejä yksi riville.
 
 ## Spotify ja spotDL
 
@@ -108,11 +108,19 @@ Latausloki näkyy ikkunan alareunassa aiempaa suurempana. Siinä on vierityspalk
 
 Paina **Keskeytä** pysäyttääksesi toiminnon. Valmiit kappaleet säilyvät. Käynnistä sama lataus myöhemmin uudelleen samalla tallennuskansiolla, kansiomuodolla ja tiedostomuodolla: jo ladatut kappaleet ohitetaan. Keskeneräinen kappale voidaan ladata uudelleen. Latausarkistotiedostot säilyttävät tiedon valmiista latauksista.
 
+## Useita kappaleita yhtä aikaa
+
+Valitse ikkunan yläosasta **Latauksia kerralla → 1, 2, 3 tai 4** ennen latauksen aloitusta. Oletus on **2**, ja valinta tallentuu asetuksiin. **1** lataa peräkkäin. Suurempi arvo lataa useita kappaleita rinnakkain, myös yhden albumin tai soittolistan sisältä sekä usean linkin jonossa. Raja koskee koko aktiivista jonoa; se ei kertaudu albumien määrällä. Toimii YouTube- ja Spotify-tilassa sekä kaikilla kansiomuodoilla.
+
+YouTube lukee ensin kappalelistat ja käynnistää sitten rinnakkaiset lataukset. Rinnakkaisessa tilassa edistyminen näyttää käsitellyt **tiedostot** ja käynnissä olevien latausten määrän. Aika-arvio koskee koko jäljellä olevaa jonoa ja tarkentuu työn edetessä. Kappaleet voivat valmistua eri järjestyksessä. Yhden kappaleen latausta ei jaeta useaan erilliseen kappalelataukseen.
+
+**Keskeytä** pysäyttää kaikki käynnissä olevat lataukset ja estää odottavien käynnistymisen. Valmiit tiedostot ja niiden lataushistoria säilyvät. Kirjautumis- tai varmistuspyyntö pysäyttää myös muut rinnakkaislataukset. Jokaisella latausprosessilla on oma evästekopio; alkuperäistä cookies.txt-tiedostoa ei muokata. Jos palvelu alkaa rajoittaa latauksia, pienennä samanaikaisten latausten määrää.
+
 ## Tumma käyttöliittymä ja koko latausjonon aika-arvio
 
 Sovelluksen tausta on musta/tumma, painikkeet ovat pyöristettyjä ja Windowsin ikkunapalkki käyttää samaa tummaa teemaa. **YouTube** käyttää punaisia ja **Spotify** vihreitä korostuksia. Julkaisulista mukautuu teemaan. Näkyviä vierityspalkkeja ei ole; listaa ja lokia voi vierittää hiiren rullalla.
 
-Latauspalkki seuraa **koko valittua jonoa**, ei pelkästään yhtä kappaletta. Sen alla näkyvät käsitellyt julkaisut, kokonaisprosentti ja likimääräinen jäljellä oleva aika, esimerkiksi **Koko jono · 25 % · 2/8 julkaisua · noin 18 min jäljellä**. Aika-arvio perustuu toteutuneeseen nopeuteen ja julkaisujen edistymiseen. Se tarkentuu työn edetessä; eri kokoiset albumit, verkkoyhteys ja äänen muuntaminen voivat muuttaa arviota. Alussa näytetään **lasketaan aika-arviota**. Keskeytettyä jonoa ei näytetä valmiina.
+Latauspalkki seuraa **koko valittua jonoa**, ei pelkästään yhtä kappaletta. Sen alla näkyvät käsitellyt julkaisut (yksi lataus kerrallaan) tai tiedostot (rinnakkaislataus), kokonaisprosentti ja likimääräinen jäljellä oleva aika, esimerkiksi **Koko jono · 25 % · 2/8 julkaisua · noin 18 min jäljellä**. Aika-arvio perustuu toteutuneeseen nopeuteen ja julkaisujen edistymiseen. Se tarkentuu työn edetessä; eri kokoiset albumit, verkkoyhteys ja äänen muuntaminen voivat muuttaa arviota. Alussa näytetään **lasketaan aika-arviota**. Keskeytettyä jonoa ei näytetä valmiina.
 
 ## Päivitykset
 
@@ -174,4 +182,4 @@ Lähdekoodi on `lahdekoodi/`-kansiossa. Rakentaminen vaatii Windowsin, Python 3.
 
 Skripti asentaa Python-riippuvuudet, ajaa testit, lataa lukitut taustatyökalut ja tarkistaa niiden SHA-256:t sekä rakentaa `dist/`-kansioon asentajan, portable-paketin ja tarkistussummat. Versiot ja latausosoitteet ovat tiedostossa `lahdekoodi/tools-lock.json`. Kolmansien osapuolten lisenssit ja lähteet on kuvattu tiedostossa [THIRD_PARTY.md](THIRD_PARTY.md).
 
-Uutta versiota varten päivitä `VERSION` tiedostossa `lahdekoodi/app.py` ja julkaise vastaava Git-tagi, esimerkiksi seuraavana korjauspäivityksenä `v1.1.6`. GitHub Actions testaa ja paketoi sovelluksen sekä julkaisee asentajan, portable-paketin ja tarkistussummat. Pysyvä AppId mahdollistaa päivityksen nykyisen asennuksen paikalle. Sovelluksen päivitystarkistus käyttää uusinta vakaata GitHub-julkaisua.
+Uutta versiota varten päivitä `VERSION` tiedostossa `lahdekoodi/app.py` ja julkaise vastaava Git-tagi, esimerkiksi seuraavana korjauspäivityksenä `v1.2.1`. GitHub Actions testaa ja paketoi sovelluksen sekä julkaisee asentajan, portable-paketin ja tarkistussummat. Pysyvä AppId mahdollistaa päivityksen nykyisen asennuksen paikalle. Sovelluksen päivitystarkistus käyttää uusinta vakaata GitHub-julkaisua.

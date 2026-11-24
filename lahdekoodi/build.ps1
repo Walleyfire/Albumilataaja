@@ -10,6 +10,10 @@ python -m unittest discover -s $source -v
 if ($LASTEXITCODE) { throw 'Tests failed' }
 python (Join-Path $source 'fetch_tools.py') (Join-Path $package 'tools')
 if ($LASTEXITCODE) { throw 'Tool download failed' }
+python -m PyInstaller --noconfirm --clean --console --onefile --name youtube-parallel --distpath (Join-Path $package 'tools') --workpath (Join-Path $repo 'build-youtube') --specpath (Join-Path $repo 'build-youtube') (Join-Path $source 'youtube_parallel.py')
+if ($LASTEXITCODE) { throw 'Parallel YouTube worker build failed' }
+& (Join-Path $package 'tools\youtube-parallel.exe') --self-test
+if ($LASTEXITCODE) { throw 'Parallel YouTube worker dependency check failed' }
 python -m PyInstaller --noconfirm --clean --console --onefile --name spotdl --distpath (Join-Path $package 'tools') --workpath (Join-Path $repo 'build-spotify') --specpath (Join-Path $repo 'build-spotify') --collect-all spotdl --collect-all ytmusicapi --collect-all pykakasi --collect-all curl_cffi (Join-Path $source 'spotify_worker.py')
 if ($LASTEXITCODE) { throw 'Spotify worker build failed' }
 & (Join-Path $package 'tools\spotdl.exe') --self-test

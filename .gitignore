@@ -10,3 +10,4 @@ dist/
 tool-downloads/
 *.spec
 build-spotify/
+build-youtube/

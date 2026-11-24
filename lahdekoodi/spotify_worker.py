@@ -4,10 +4,31 @@ Keep this in a separate process: spotDL still owns matching, album paths,
 conversion, tags and archives. Only its embedded yt-dlp is replaced.
 """
 import json
+from contextvars import ContextVar
+import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
+import threading
 from urllib.parse import urlparse, parse_qs
+from youtube_session import isolated_cookie_arguments
+from queue_progress import PARALLEL_PROGRESS
+
+TRACK_WORKSPACE=ContextVar('spotify_track_workspace',default=None)
+PROGRESS_LOCK=threading.RLock()
+
+
+def save_archive(archive,file):
+    destination=Path(file)
+    destination.parent.mkdir(parents=True,exist_ok=True)
+    with PROGRESS_LOCK:
+        with tempfile.NamedTemporaryFile(mode='w',encoding='utf-8',dir=destination.parent,prefix='.spotdl-history-',suffix='.tmp',delete=False) as output:
+            temporary=Path(output.name)
+            for url in sorted(archive): output.write(url+'\n')
+        try: temporary.replace(destination)
+        finally: temporary.unlink(missing_ok=True)
+    return True
 
 
 def tools_directory():
@@ -42,10 +63,13 @@ def external_metadata(provider,url,download=False):
     from spotdl.utils.config import get_temp_path
     # Inherit stderr so the UI sees actual YouTube errors, including auth
     # challenges, rather than spotDL's generic AudioProviderError alone.
-    result=subprocess.run(audio_command(url,get_temp_path(),provider.output_format,provider.cookie_file,download),
-                          stdout=subprocess.PIPE,text=True,encoding='utf-8',errors='replace',
-                          creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0),
-                          timeout=None if download else 180)
+    folder=getattr(provider,'_track_workspace',None) or get_temp_path()
+    args=audio_command(url,folder,provider.output_format,provider.cookie_file,download)
+    # Each concurrent external process owns its own session copy.
+    with isolated_cookie_arguments(args,os.environ.get('ALBUMILATAAJA_WORKSPACE')) as args:
+        result=subprocess.run(args,stdout=subprocess.PIPE,text=True,encoding='utf-8',errors='replace',
+                              creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0),
+                              timeout=None if download else 180)
     if result.returncode:
         raise AudioProviderError('YouTube-äänen lataus epäonnistui. Tarkka virhe näkyy yllä lokissa.')
     try:
@@ -58,7 +82,63 @@ def external_metadata(provider,url,download=False):
 
 def install_audio_bridge():
     from spotdl.providers.audio.base import AudioProvider
+    if getattr(AudioProvider,'_albumilataaja_bridge',False): return
+    from spotdl.download.downloader import Downloader
+    from spotdl.download.progress_handler import ProgressHandler
+    from spotdl.utils.archive import Archive
+    import spotdl.download.downloader as download_module
+    original_init=AudioProvider.__init__
+    original_temp=download_module.get_temp_path
+    original_download=Downloader.async_search_and_download
+    original_count=ProgressHandler.set_song_count
+    def provider_init(self,*args,**kwargs):
+        original_init(self,*args,**kwargs)
+        self._track_workspace=TRACK_WORKSPACE.get()
+    def track_temp(): return TRACK_WORKSPACE.get() or original_temp()
+    def song_count(self,count):
+        self._albumilataaja_progress={'completed':0,'failed':0,'running':0}
+        return original_count(self,count)
+    def report(handler):
+        state=handler._albumilataaja_progress
+        print(PARALLEL_PROGRESS+json.dumps({'total':handler.song_count,'completed':state['completed'],
+              'failed':state['failed'],'partial':0,'running':state['running']}),flush=True)
+    async def download(self,song):
+        parallel=self.settings['threads']>1 and self.progress_handler.song_count>0
+        handler=self.progress_handler
+        if parallel:
+            with PROGRESS_LOCK:
+                if not hasattr(handler,'_albumilataaja_progress'):
+                    handler._albumilataaja_progress={'completed':0,'failed':0,'running':0}
+                handler._albumilataaja_progress['running']+=1
+                report(handler)
+        failed=True
+        try:
+            # The coroutine and its audio provider share this directory. Two
+            # songs matched to the same video can never overwrite temp audio.
+            with tempfile.TemporaryDirectory(prefix='spotify-track-',dir=os.environ.get('ALBUMILATAAJA_WORKSPACE')) as temporary:
+                token=TRACK_WORKSPACE.set(Path(temporary))
+                try:
+                    result=await original_download(self,song)
+                    failed=not result[1]
+                    if not failed and self.settings['archive']:
+                        with PROGRESS_LOCK:
+                            self.url_archive.add(result[0].url)
+                            self.url_archive.save(self.settings['archive'])
+                    return result
+                finally: TRACK_WORKSPACE.reset(token)
+        finally:
+            if parallel:
+                with PROGRESS_LOCK:
+                    state=handler._albumilataaja_progress
+                    state['running']-=1; state['completed']+=1; state['failed']+=int(failed)
+                    report(handler)
+    AudioProvider.__init__=provider_init
     AudioProvider.get_download_metadata=external_metadata
+    AudioProvider._albumilataaja_bridge=True
+    download_module.get_temp_path=track_temp
+    Downloader.async_search_and_download=download
+    ProgressHandler.set_song_count=song_count
+    Archive.save=save_archive
 
 
 def main():

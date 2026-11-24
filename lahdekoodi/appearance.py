@@ -97,6 +97,9 @@ def build_interface(app,settings,preview=False):
     session=frame(outer); session.pack(fill='x',pady=(0,8))
     app.cookie_label=label(session,'YouTube-istunto: valittu tiedosto' if app.cookie_file.get() else 'YouTube-istunto: ei käytössä',font=('Segoe UI',11))
     app.cookie_label.pack(side='left')
+    label(session,'Latauksia kerralla',font=('Segoe UI',11)).pack(side='left',padx=(18,8))
+    app.parallel_combo=combo(session,app.parallel,['1','2','3','4'],width=68)
+    app.parallel_combo.pack(side='left')
     button(session,'YouTube-evästeet',app.choose_youtube_cookies,width=145,height=28,font=('Segoe UI',11)).pack(side='right')
     button(session,'Poista valinta',app.clear_youtube_cookies,width=110,height=28,font=('Segoe UI',11)).pack(side='right',padx=8)
 
