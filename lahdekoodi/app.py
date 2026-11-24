@@ -21,7 +21,7 @@ from urllib.parse import urlparse
 import webbrowser
 import requests
 
-VERSION = '1.3.1'
+VERSION = '1.4.0'
 FLAT_LAYOUT = 'Suoraan tallennuskansioon'
 REPOSITORY = 'Walleyfire/Albumilataaja'
 BASE = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
@@ -89,12 +89,12 @@ def spotify_url(value):
 def spot_command(url, root, fmt,layout='Vuosi - Albumi',cookie_file='',workers=1):
     album='{album}, {year}' if layout=='Albumi, Vuosi' else '{year} - {album}'
     flat=layout==FLAT_LAYOUT
-    output=root/'[{track-id}] {artist} - {title}.{output-ext}' if flat else root/'{album-artist}'/album/'{disc-number}-{track-number} - {title}.{output-ext}'
+    output=root/'{artists} - {title}.{output-ext}' if flat else root/'{album-artist}'/album/'{artists} - {title}.{output-ext}'
     archive=root/(('.spotdl-archive-direct-' if flat else '.spotdl-archive-')+fmt+'.txt')
     urls=[spotify_url(value) for value in url] if isinstance(url,(list,tuple)) else [spotify_url(url)]
     return [str(TOOLS/'spotdl.exe'), 'download', *urls, '--headless',
             *(['--cookie-file',validate_cookie_file(cookie_file)] if cookie_file else []),
-            '--ffmpeg', str(TOOLS/'ffmpeg.exe'), '--format', fmt, '--threads', str(download_workers(workers)),
+            '--skip-album-art','--lyrics', '--ffmpeg', str(TOOLS/'ffmpeg.exe'), '--format', fmt, '--threads', str(download_workers(workers)),
             '--output', str(output),
             '--overwrite', 'skip', '--archive', str(archive),
             '--simple-tui', '--print-errors', '--max-retries', '3',
@@ -111,7 +111,7 @@ def command(url, folder, fmt,cookie_file=''):
             '--progress-template', 'download:'+PROGRESS+'{"downloaded":%(progress.downloaded_bytes|0)j,"total":%(progress.total_bytes,progress.total_bytes_estimate|0)j,"index":%(info.playlist_index|1)j,"count":%(info.n_entries,info.playlist_count|1)j}',
             '--print', 'after_move:'+TRACK_DONE+'{"index":%(playlist_index|1)j,"count":%(n_entries,playlist_count|1)j,"filename":%(filepath|)j}',
             '--download-archive', str(folder/('.archive-'+fmt+'.txt')),
-            '-P', str(folder), '-o', '%(playlist_index|1)02d - %(title).140s [%(id)s].%(ext)s', '--', youtube_url(url)]
+            '-P', str(folder), '-o', '%(title).150s.%(ext)s', '--', youtube_url(url)]
 
 class App(ctk.CTk):
     def __init__(self):
@@ -130,7 +130,7 @@ class App(ctk.CTk):
         self.destination=tk.StringVar(value=settings.get('destination',str(Path.home()/'Music'/'Albumilataaja')))
         self.format=tk.StringVar(value=settings.get('format','flac'))
         self.source=tk.StringVar(value=settings.get('source','YouTube'))
-        self.layout=tk.StringVar(value=settings.get('layout','Albumi, Vuosi'))
+        self.layout=tk.StringVar(value=settings.get('layout',FLAT_LAYOUT))
         self.parallel=tk.StringVar(value=str(download_workers(settings.get('parallel_downloads',2))))
         self.status=tk.StringVar(value='Liitä valitun palvelun linkit, yksi linkki riville.')
         self.cookie_file=tk.StringVar(value=settings.get('youtube_cookie_file',''))

@@ -12,6 +12,7 @@ import threading
 from queue_progress import PROGRESS, TRACK_DONE, PARALLEL_PROGRESS
 from youtube_session import isolated_cookie_arguments, requires_youtube_auth
 from download_rows import row_event
+from music_files import youtube_identity,publish_music
 
 NO_WINDOW=getattr(subprocess,'CREATE_NO_WINDOW',0)
 OUTPUT_LOCK=threading.Lock()
@@ -19,6 +20,18 @@ OUTPUT_LOCK=threading.Lock()
 
 def output(line):
     with OUTPUT_LOCK: print(line,flush=True)
+
+
+def finalize_download(temporary,task,filename):
+    root=Path(temporary).resolve();fmt=task['command'][task['command'].index('--audio-format')+1]
+    source=Path(filename).resolve() if filename else root/(task['id']+'.'+fmt)
+    if not source.is_relative_to(root) or not source.is_file():raise ValueError('Valmistunutta äänitiedostoa ei löytynyt.')
+    metadata=root/(task['id']+'.info.json')
+    info=json.loads(metadata.read_text(encoding='utf-8')) if metadata.exists() else {}
+    title,artists=youtube_identity(info,task.get('artist',''),task.get('title',''))
+    task['title']=title;task['artist']=', '.join(artists)
+    destination=Path(task['command'][task['command'].index('-P')+1])
+    return str(publish_music(source,destination,title,artists))
 
 
 class Batch:
@@ -60,7 +73,7 @@ class Batch:
         if self.stopped.is_set(): return
         with self.lock:
             self.partial[number]=0.; self.report()
-        failed=False; process=None; skipped=False; last_error=''; filename=''
+        failed=False; process=None; skipped=False; last_error=''; filename='';published=False
         try:
             if task.get('error'): raise ValueError(task['error'])
             archive=Path(task['archive'])
@@ -75,7 +88,9 @@ class Batch:
                 private_archive=Path(temporary)/'archive.txt'
                 args=list(task['command'])
                 args[args.index('--download-archive')+1]=str(private_archive)
-                args[args.index('-o')+1]=f"{task['index']:02d} - %(title).140s [%(id)s].%(ext)s"
+                args[args.index('-o')+1]='%(id)s.%(ext)s'
+                args[args.index('-P')+1]=temporary
+                args[1:1]=['--write-info-json']
                 args[-1]='https://www.youtube.com/watch?v='+task['id']
                 args[args.index('--yes-playlist')]='--no-playlist'
                 if self.cookies: args[1:1]=['--cookies',self.cookies]
@@ -109,10 +124,12 @@ class Batch:
                                 self.emit(f'[{number+1}/{len(self.tasks)}] {line}')
                                 if requires_youtube_auth(line): self.halt(); break
                         failed=bool(process.wait())
+                        if not failed and not self.stopped.is_set():
+                            filename=finalize_download(temporary,task,filename);published=True
                     finally:
                         # A completed file's history is retained even if another
                         # concurrent download fails or requests authentication.
-                        self.merge_archive(private_archive,archive)
+                        if published:self.merge_archive(private_archive,archive)
                         with self.lock: self.processes.discard(process)
         except Exception as error:
             failed=True; last_error=str(error)
@@ -164,8 +181,9 @@ def prepare_tasks(jobs,cookies,workspace,emit=output):
                 key=(os.path.normcase(str(Path(archive).resolve())),video)
                 if key in seen: continue
                 seen.add(key)
+                title,artists=youtube_identity(entry,job.get('artist') or entry.get('channel') or '',entry.get('title') or video)
                 tasks.append({'command':args,'id':video,'index':index,'archive':archive,
-                              'title':entry.get('title') or video,'artist':job.get('artist') or entry.get('channel') or '',
+                              'title':title,'artist':', '.join(artists),
                               'album':job.get('album','')})
         except Exception as error:
             tasks.append({'error':str(error)})

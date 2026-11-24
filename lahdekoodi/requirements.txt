@@ -4,3 +4,4 @@ pyinstaller==6.22.3
 spotapi[websocket,pymongo,redis]==1.2.8
 customtkinter==6.0.0
 spotdl==4.6.0
+mutagen==1.48.1

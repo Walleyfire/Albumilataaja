@@ -12,6 +12,18 @@ from download_rows import DownloadRows,parse_row
 
 
 class ParallelDownloadTests(unittest.TestCase):
+    def test_failed_metadata_cleanup_never_records_download_as_finished(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);tasks=self.tasks(root,1);archive=Path(tasks[0]['archive'])
+            archive.write_text('youtube previous\n')
+            class Process:
+                def __init__(self,args,**kwargs):self.args=args;self.stdout=iter([])
+                def wait(self):
+                    Path(self.args[self.args.index('--download-archive')+1]).write_text('youtube AAAAAAAAAAA\n')
+                    return 0
+            with patch.object(parallel.subprocess,'Popen',side_effect=Process),patch.object(parallel,'finalize_download',side_effect=ValueError('tag cleanup failed')):
+                self.assertEqual(parallel.Batch(tasks,1,'',root,lambda line:None).run(),1)
+            self.assertEqual(archive.read_text(),'youtube previous\n')
     def test_larger_selected_limits_really_run_simultaneously(self):
         for count in (5,15,20):
             with self.subTest(workers=count),tempfile.TemporaryDirectory() as directory:
@@ -29,7 +41,7 @@ class ParallelDownloadTests(unittest.TestCase):
                     def wait(self):
                         with lock:counts['running']-=1
                         return 0
-                with patch.object(parallel.subprocess,'Popen',side_effect=Process):
+                with patch.object(parallel.subprocess,'Popen',side_effect=Process),patch.object(parallel,'finalize_download',return_value=''):
                     self.assertEqual(parallel.Batch(tasks,count,'',root,lambda line:None).run(),0)
                 self.assertEqual(counts['peak'],count)
                 spotify=app.spot_command('https://open.spotify.com/album/123',root,'flac',workers=count)
@@ -60,7 +72,7 @@ class ParallelDownloadTests(unittest.TestCase):
                     self.returncode=1 if self.id=='B'*11 else 0
                     if not self.returncode: Path(self.args[self.args.index('--download-archive')+1]).write_text('youtube '+self.id+'\n')
                     return self.returncode
-            with patch.object(parallel.subprocess,'Popen',side_effect=Process):
+            with patch.object(parallel.subprocess,'Popen',side_effect=Process),patch.object(parallel,'finalize_download',return_value=''):
                 self.assertEqual(parallel.Batch(tasks,2,'',root,records.append).run(),1)
             self.assertEqual(counts['peak'],2)
             self.assertEqual(set(archive.read_text().splitlines()),{'youtube previous','youtube '+'A'*11,'youtube '+'C'*11,'youtube '+'D'*11})
@@ -109,7 +121,7 @@ class ParallelDownloadTests(unittest.TestCase):
                     if cookie.read_text()!=original: raise AssertionError('Session copied from another download')
                     cookie.write_text('engine modifications'); self.stdout=iter([])
                 def wait(self): return 0
-            with patch.object(parallel.subprocess,'Popen',side_effect=Process):
+            with patch.object(parallel.subprocess,'Popen',side_effect=Process),patch.object(parallel,'finalize_download',return_value=''):
                 self.assertEqual(parallel.Batch(self.tasks(root,2),2,str(source),root,lambda line:None).run(),0)
             self.assertEqual(source.read_text(),original); self.assertEqual(source.stat().st_mtime_ns,before)
             self.assertEqual(len(set(used)),2); self.assertTrue(all(not file.exists() for file in used))

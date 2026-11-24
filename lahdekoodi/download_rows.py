@@ -36,7 +36,7 @@ class DownloadRows:
         row['stage']=stage
         for field in ('title','artist','album','source','error','filename'):
             if field in data and data[field] is not None:
-                row[field]=' '.join(str(data[field]).split())[:4096 if field=='filename' else 2000]
+                row[field]=str(data[field])[:4096] if field=='filename' else ' '.join(str(data[field]).split())[:2000]
         if data.get('percent') is not None:
             try:
                 percent=float(data['percent'])

@@ -15,7 +15,8 @@ class AppTests(unittest.TestCase):
         args=app.command('https://youtu.be/example',folder,'flac')
         self.assertEqual(args[args.index('-P')+1],str(root))
         self.assertNotIn('/',args[args.index('-o')+1])
-        self.assertIn('%(id)s',args[args.index('-o')+1])
+        self.assertNotIn('%(id)s',args[args.index('-o')+1])
+        self.assertNotIn('playlist_index',args[args.index('-o')+1])
         self.assertEqual(app.download_folder(root,'Artist','Album',1987,'Albumi, Vuosi'),root/'Artist'/'Album, 1987')
         self.assertEqual(app.download_folder(root,'Artist','Album',1987,'Vuosi - Albumi'),root/'Artist'/'1987 - Album')
     def test_flat_spotify_names_do_not_create_subfolders_or_share_nested_archive(self):
@@ -25,9 +26,9 @@ class AppTests(unittest.TestCase):
         nested=app.spot_command(url,root,'flac','Albumi, Vuosi')
         template=Path(flat[flat.index('--output')+1])
         self.assertEqual(template.parent,root)
-        self.assertIn('{artist}',template.name)
-        self.assertIn('{track-id}',template.name)
-        self.assertTrue(template.name.startswith('[{track-id}]'))
+        self.assertIn('{artists}',template.name)
+        self.assertNotIn('{track-id}',template.name)
+        self.assertNotIn('{track-number}',template.name)
         self.assertNotEqual(flat[flat.index('--archive')+1],nested[nested.index('--archive')+1])
         self.assertNotEqual(flat[flat.index('--archive')+1],app.spot_command(url,root,'opus',app.FLAT_LAYOUT)[flat.index('--archive')+1])
     def test_multiple_links_keep_order_skip_blanks_and_exact_duplicates(self):

@@ -57,12 +57,12 @@ Kirjautumis- tai varmistuspyyntö pysäyttää koko jonon. Jos palvelu alkaa raj
 Kaikki vaihtoehdot toimivat molemmilla latauslähteillä:
 
 ```text
-Albumi, Vuosi (oletus):
+Albumi, Vuosi:
 Musiikki/
 └── Artisti/
     └── Albumin nimi, 2026/
-        ├── Kappale.flac
-        └── Toinen kappale.flac
+        ├── Artisti - Kappale.flac
+        └── Artisti - Toinen kappale.flac
 
 Vuosi - Albumi:
 Musiikki/
@@ -71,15 +71,21 @@ Musiikki/
     ├── 2024 - Edellinen albumi/
     └── 2020 - Vanhempi albumi/
 
-Suoraan tallennuskansioon:
+Suoraan tallennuskansioon (uuden asennuksen oletus):
 Musiikki/
-├── Kappale [tunniste].flac
-└── Toinen kappale [tunniste].flac
+├── Alan Walker - Faded.flac
+└── Ava Max - Ghost.flac
 ```
 
 Valitse **Suoraan tallennuskansioon**, kun haluat kappaleet valitsemaasi kansioon ilman artisti- tai albumialikansioita. Esimerkiksi tallennuskansio `D:\Musiikki` tarkoittaa, että kappaleet tulevat suoraan siihen.
 
-YouTube-nimissä on videon tunniste. Spotify käyttää albumikansioissa levy- ja kappalenumeroa; suorassa tallennuksessa nimi on **[Spotify-tunniste] Artisti - Kappale**, jotta samannimiset kappaleet eivät korvaa toisiaan. Spotify käyttää suorassa tallennuksessa erillistä lataushistoriaa.
+Uudet musiikkitiedostot nimetään **Artisti - Kappale.flac** -muotoon (tai valitun tiedostomuodon päätteellä). Alun kappalenumerot sekä YouTube- ja Spotify-tunnisteet jätetään pois. Nimistä poistetaan esitystapamerkinnät, kuten **Official Video**, **Official Audio** ja **HD**. Remix-, live- ja remaster-version nimi säilytetään, jotta eri versiot erottuvat toisistaan.
+
+Tiedoston metatietoihin tallennetaan vain **kappaleen nimi** ja **artistit**. Albumi-, vuosi-, kappalenumero-, lähdeosoite-, palvelutunniste- ja muut käyttäjätagit sekä kansikuvat poistetaan uusista latauksista. Spotifyn nimi- ja artistitiedot tulevat kappaletiedoista. YouTubessa hyödynnetään musiikkitietoja ja videon **Artisti - Kappale** -nimeä; julkaisukanavaa ei käytetä artistina silloin, kun artisti selviää otsikosta. Äänen sisältöä ei muuteta metatietojen siistimisessä.
+
+Musiikki viimeistellään väliaikaisessa kansiossa ja siirretään tallennuskansioon vasta valmiina. Jos samanniminen tiedosto on jo olemassa, uusi saa esimerkiksi nimen **Artisti - Kappale (2).flac**. Aiemman tiedoston päälle ei kirjoiteta.
+
+**Muutos koskee vain uusia latauksia. Aiemmin ladattuja tiedostoja tai niiden metatietoja ei muuteta.** Lataushistoria säilyy, ja jo ladatut kappaleet ohitetaan kuten ennenkin. Tunnisteita käytetään vain sovelluksen sisäisessä lataushistoriassa.
 
 Kansiomuodon vaihtaminen koskee seuraavia latauksia. Aiemmin ladattuja tiedostoja ei siirretä. YouTube-linkkien albumikansiot perustuvat saatavilla oleviin kanava-, soittolista- ja julkaisutietoihin. **Avaa kansio** näyttää valitun tallennuskansion.
 
@@ -155,4 +161,4 @@ Lähdekoodi on `lahdekoodi/`-kansiossa. Rakentaminen vaatii Windowsin, Python 3.
 
 Skripti asentaa Python-riippuvuudet, ajaa testit, lataa lukitut taustatyökalut ja tarkistaa niiden SHA-256:t. Se rakentaa taustatyökalut, sovelluksen, asentajan, portable-paketin ja tarkistussummat `dist/`-kansioon. Rakennuksessa käytetyt työkalut ovat tiedostossa `lahdekoodi/tools-lock.json`. Kolmansien osapuolten lisenssit ja lähteet on kuvattu tiedostossa [THIRD_PARTY.md](THIRD_PARTY.md).
 
-Uutta versiota varten päivitä `VERSION` tiedostossa `lahdekoodi/app.py` ja julkaise vastaava Git-tagi, esimerkiksi seuraavana korjauspäivityksenä `v1.3.2`. GitHub Actions testaa ja paketoi sovelluksen sekä julkaisee asentajan, portable-paketin ja tarkistussummat. Pysyvä AppId mahdollistaa päivityksen nykyisen asennuksen paikalle.
+Uutta versiota varten päivitä `VERSION` tiedostossa `lahdekoodi/app.py` ja julkaise vastaava Git-tagi, esimerkiksi seuraavana korjauspäivityksenä `v1.4.1`. GitHub Actions testaa ja paketoi sovelluksen sekä julkaisee asentajan, portable-paketin ja tarkistussummat. Pysyvä AppId mahdollistaa päivityksen nykyisen asennuksen paikalle.

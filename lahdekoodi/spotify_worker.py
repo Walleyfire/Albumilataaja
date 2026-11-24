@@ -15,15 +15,18 @@ from urllib.parse import urlparse, parse_qs
 from youtube_session import isolated_cookie_arguments
 from queue_progress import PARALLEL_PROGRESS
 from download_rows import row_event
+from music_files import spotify_identity,publish_music
 
 TRACK_WORKSPACE=ContextVar('spotify_track_workspace',default=None)
 TRACK_ROW=ContextVar('spotify_track_row',default=None)
+TRACK_OUTPUT=ContextVar('spotify_track_output',default=None)
 PROGRESS_LOCK=threading.RLock()
 
 
 def song_row(song):
-    return {'id':'spotify:'+str(song.song_id or song.url),'title':song.name or 'Kappale',
-            'artist':', '.join(song.artists or []),'album':song.album_name or '', 'source':'Spotify','error':''}
+    title,artists=spotify_identity(song)
+    return {'id':'spotify:'+str(song.song_id or song.url),'title':title,
+            'artist':', '.join(artists),'album':song.album_name or '', 'source':'Spotify','error':''}
 
 
 def emit_row(record,**changes):
@@ -115,12 +118,19 @@ def install_audio_bridge():
     original_temp=download_module.get_temp_path
     original_download=Downloader.async_search_and_download
     original_multiple=Downloader.download_multiple_songs
+    original_filename=download_module.create_file_name
     original_count=ProgressHandler.set_song_count
     def provider_init(self,*args,**kwargs):
         original_init(self,*args,**kwargs)
         self._track_workspace=TRACK_WORKSPACE.get()
         self._track_row=TRACK_ROW.get()
     def track_temp(): return TRACK_WORKSPACE.get() or original_temp()
+    def staged_filename(*args,**kwargs):
+        destination=original_filename(*args,**kwargs)
+        context=TRACK_OUTPUT.get()
+        if context is None:return destination
+        context['folder']=destination.parent
+        return context['workspace']/('result'+destination.suffix)
     def song_count(self,count):
         self._albumilataaja_progress={'completed':0,'failed':0,'running':0}
         return original_count(self,count)
@@ -145,9 +155,23 @@ def install_audio_bridge():
             with tempfile.TemporaryDirectory(prefix='spotify-track-',dir=os.environ.get('ALBUMILATAAJA_WORKSPACE')) as temporary:
                 token=TRACK_WORKSPACE.set(Path(temporary))
                 row_token=TRACK_ROW.set(record)
+                context={'workspace':Path(temporary),'folder':None}
+                output_token=TRACK_OUTPUT.set(context)
                 try:
                     result=await original_download(self,song)
                     failed=not result[1]
+                    if not failed:
+                        try:
+                            source=Path(result[1]).resolve()
+                            if not source.is_relative_to(Path(temporary).resolve()) or context['folder'] is None:
+                                raise ValueError('Latauksen väliaikaista tiedostoa ei voitu vahvistaa.')
+                            title,artists=spotify_identity(result[0])
+                            destination=publish_music(source,context['folder'],title,artists)
+                            result=(result[0],destination)
+                        except Exception as error:
+                            failed=True;emit_row(record,stage='error',error=str(error))
+                            self.errors.append(f'{song.url} - MusicMetadataError: {error}')
+                            return result[0],None
                     if not failed and self.settings['archive']:
                         with PROGRESS_LOCK:
                             self.url_archive.add(result[0].url)
@@ -155,7 +179,7 @@ def install_audio_bridge():
                     if not failed:
                         emit_row(record,stage='skipped' if record.get('stage')=='searching' else 'done',percent=100,filename=str(result[1]))
                     return result
-                finally: TRACK_WORKSPACE.reset(token); TRACK_ROW.reset(row_token)
+                finally: TRACK_WORKSPACE.reset(token); TRACK_ROW.reset(row_token);TRACK_OUTPUT.reset(output_token)
         finally:
             if failed: emit_row(record,stage='error',error=record.get('error') or 'Kappaleen lataus epäonnistui. Katso tarkempi loki.')
             if parallel:
@@ -171,6 +195,7 @@ def install_audio_bridge():
     AudioProvider.get_download_metadata=external_metadata
     AudioProvider._albumilataaja_bridge=True
     download_module.get_temp_path=track_temp
+    download_module.create_file_name=staged_filename
     Downloader.async_search_and_download=download
     Downloader.download_multiple_songs=multiple
     ProgressHandler.set_song_count=song_count
