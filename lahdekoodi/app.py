@@ -19,7 +19,7 @@ import webbrowser
 import requests
 from ytmusicapi import YTMusic
 
-VERSION = '1.2.0'
+VERSION = '1.2.1'
 FLAT_LAYOUT = 'Suoraan tallennuskansioon'
 REPOSITORY = 'Walleyfire/Albumilataaja'
 BASE = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
@@ -50,7 +50,7 @@ def download_folder(root,artist,title,year,layout):
     return Path(root)/safe_name(artist)/album_folder(title,year,layout)
 
 def download_workers(value):
-    try: return max(1,min(4,int(value)))
+    try: return max(1,min(20,int(value)))
     except (ValueError,TypeError): return 2
 
 def newest_first(albums):

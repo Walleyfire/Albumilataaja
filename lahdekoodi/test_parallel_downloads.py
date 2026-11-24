@@ -11,6 +11,28 @@ from queue_progress import QueueProgress,PROGRESS,PARALLEL_PROGRESS
 
 
 class ParallelDownloadTests(unittest.TestCase):
+    def test_larger_selected_limits_really_run_simultaneously(self):
+        for count in (5,15,20):
+            with self.subTest(workers=count),tempfile.TemporaryDirectory() as directory:
+                root=Path(directory); gate=threading.Barrier(count);lock=threading.Lock()
+                counts={'running':0,'peak':0}
+                args=app.command('https://www.youtube.com/playlist?list=test',root,'flac')
+                tasks=[{'id':f'{i:011d}','command':args,'archive':str(root/'archive.txt'),'index':i+1} for i in range(count)]
+                class Process:
+                    def __init__(self,args,**kwargs): self.stdout=self.lines()
+                    def lines(self):
+                        with lock:
+                            counts['running']+=1;counts['peak']=max(counts['peak'],counts['running'])
+                        gate.wait(timeout=10)
+                        yield PROGRESS+'{"downloaded":1,"total":1}'
+                    def wait(self):
+                        with lock:counts['running']-=1
+                        return 0
+                with patch.object(parallel.subprocess,'Popen',side_effect=Process):
+                    self.assertEqual(parallel.Batch(tasks,count,'',root,lambda line:None).run(),0)
+                self.assertEqual(counts['peak'],count)
+                spotify=app.spot_command('https://open.spotify.com/album/123',root,'flac',workers=count)
+                self.assertEqual(spotify[spotify.index('--threads')+1],str(count))
     def tasks(self,root,count=4):
         args=app.command('https://www.youtube.com/playlist?list=example',root,'flac')
         return [{'id':letter*11,'command':args,'archive':str(root/'.archive-flac.txt'),'index':i+1}
@@ -111,7 +133,7 @@ class ParallelDownloadTests(unittest.TestCase):
         args=app.spot_command(urls,Path('music'),'flac',workers=3)
         self.assertEqual(args[2:4],urls)
         self.assertEqual(args[args.index('--threads')+1],'3')
-        self.assertEqual(app.download_workers(100),4)
+        self.assertEqual(app.download_workers(100),20)
         self.assertEqual(app.download_workers('invalid'),2)
 
 

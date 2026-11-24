@@ -21,7 +21,7 @@ def output(line):
 
 class Batch:
     def __init__(self,tasks,workers,cookies,workspace,emit=output):
-        self.tasks=tasks; self.workers=max(1,min(4,int(workers)))
+        self.tasks=tasks; self.workers=max(1,min(20,int(workers)))
         self.cookies=cookies; self.workspace=Path(workspace); self.emit=emit
         self.lock=threading.RLock(); self.archives_lock=threading.Lock()
         self.stopped=threading.Event(); self.authentication=False
@@ -150,7 +150,7 @@ def prepare_tasks(jobs,cookies,workspace,emit=output):
 
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument('manifest',nargs='?',type=Path); parser.add_argument('--workers',type=int,choices=range(1,5),default=2)
+    parser.add_argument('manifest',nargs='?',type=Path); parser.add_argument('--workers',type=int,choices=range(1,21),default=2)
     parser.add_argument('--cookies',default=''); parser.add_argument('--self-test',action='store_true')
     args=parser.parse_args()
     if args.self_test: print('Parallel YouTube worker dependencies OK'); return 0

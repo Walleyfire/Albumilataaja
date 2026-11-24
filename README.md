@@ -110,7 +110,7 @@ Paina **Keskeytä** pysäyttääksesi toiminnon. Valmiit kappaleet säilyvät. K
 
 ## Useita kappaleita yhtä aikaa
 
-Valitse ikkunan yläosasta **Latauksia kerralla → 1, 2, 3 tai 4** ennen latauksen aloitusta. Oletus on **2**, ja valinta tallentuu asetuksiin. **1** lataa peräkkäin. Suurempi arvo lataa useita kappaleita rinnakkain, myös yhden albumin tai soittolistan sisältä sekä usean linkin jonossa. Raja koskee koko aktiivista jonoa; se ei kertaudu albumien määrällä. Toimii YouTube- ja Spotify-tilassa sekä kaikilla kansiomuodoilla.
+Valitse ikkunan yläosasta **Latauksia kerralla → 1, 2, 3, 4, 5, 15 tai 20** ennen latauksen aloitusta. Oletus on **2**, ja valinta tallentuu asetuksiin. **1** lataa peräkkäin. Suurempi arvo lataa useita kappaleita rinnakkain, myös yhden albumin tai soittolistan sisältä sekä usean linkin jonossa. Raja koskee koko aktiivista jonoa; se ei kertaudu albumien määrällä. Toimii YouTube- ja Spotify-tilassa sekä kaikilla kansiomuodoilla.
 
 YouTube lukee ensin kappalelistat ja käynnistää sitten rinnakkaiset lataukset. Rinnakkaisessa tilassa edistyminen näyttää käsitellyt **tiedostot** ja käynnissä olevien latausten määrän. Aika-arvio koskee koko jäljellä olevaa jonoa ja tarkentuu työn edetessä. Kappaleet voivat valmistua eri järjestyksessä. Yhden kappaleen latausta ei jaeta useaan erilliseen kappalelataukseen.
 
@@ -182,4 +182,4 @@ Lähdekoodi on `lahdekoodi/`-kansiossa. Rakentaminen vaatii Windowsin, Python 3.
 
 Skripti asentaa Python-riippuvuudet, ajaa testit, lataa lukitut taustatyökalut ja tarkistaa niiden SHA-256:t sekä rakentaa `dist/`-kansioon asentajan, portable-paketin ja tarkistussummat. Versiot ja latausosoitteet ovat tiedostossa `lahdekoodi/tools-lock.json`. Kolmansien osapuolten lisenssit ja lähteet on kuvattu tiedostossa [THIRD_PARTY.md](THIRD_PARTY.md).
 
-Uutta versiota varten päivitä `VERSION` tiedostossa `lahdekoodi/app.py` ja julkaise vastaava Git-tagi, esimerkiksi seuraavana korjauspäivityksenä `v1.2.1`. GitHub Actions testaa ja paketoi sovelluksen sekä julkaisee asentajan, portable-paketin ja tarkistussummat. Pysyvä AppId mahdollistaa päivityksen nykyisen asennuksen paikalle. Sovelluksen päivitystarkistus käyttää uusinta vakaata GitHub-julkaisua.
+Uutta versiota varten päivitä `VERSION` tiedostossa `lahdekoodi/app.py` ja julkaise vastaava Git-tagi, esimerkiksi seuraavana korjauspäivityksenä `v1.2.2`. GitHub Actions testaa ja paketoi sovelluksen sekä julkaisee asentajan, portable-paketin ja tarkistussummat. Pysyvä AppId mahdollistaa päivityksen nykyisen asennuksen paikalle. Sovelluksen päivitystarkistus käyttää uusinta vakaata GitHub-julkaisua.
