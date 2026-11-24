@@ -21,7 +21,7 @@ from urllib.parse import urlparse
 import webbrowser
 import requests
 
-VERSION = '1.3.0'
+VERSION = '1.3.1'
 FLAT_LAYOUT = 'Suoraan tallennuskansioon'
 REPOSITORY = 'Walleyfire/Albumilataaja'
 BASE = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]

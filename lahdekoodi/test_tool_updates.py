@@ -51,7 +51,8 @@ class ToolUpdateTests(unittest.TestCase):
             self.assertEqual((root/'yt-dlp.exe').read_bytes(),b'old')
     def test_install_transaction_rolls_back_all_files_if_second_replace_fails(self):
         with tempfile.TemporaryDirectory() as directory:
-            root=Path(directory)
+            # CI's TEMP may use an 8.3 alias; match the installer's canonical path.
+            root=Path(directory).resolve()
             for name in ('yt-dlp.exe','deno.exe'):(root/name).write_bytes(b'old-'+name.encode())
             (root/updates.VERSION_FILE).write_text(json.dumps({'yt-dlp':'old','deno':'old'}))
             payload=io.BytesIO()
