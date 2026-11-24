@@ -151,7 +151,7 @@ def build_interface(app,settings,preview=False):
     label(actions,'Muoto',width=52).pack(side='left')
     combo(actions,app.format,['flac','opus','mp3','m4a'],width=94).pack(side='left')
     label(actions,'Kansiomuoto',width=100).pack(side='left',padx=(18,0))
-    combo(actions,app.layout,['Albumi, Vuosi','Vuosi - Albumi'],width=160).pack(side='left')
+    combo(actions,app.layout,['Albumi, Vuosi','Vuosi - Albumi','Suoraan tallennuskansioon'],width=210).pack(side='left')
     app.download_btn=button(actions,'↓  Lataa valitut julkaisut',app.download_selected,True,width=228,height=40)
     app.stop_btn=button(actions,'Keskeytä',app.stop,width=104,height=40,state='disabled')
     app.stop_btn.pack(side='right'); app.download_btn.pack(side='right',padx=(8,10))

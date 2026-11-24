@@ -30,7 +30,7 @@ Asennus tapahtuu omaan käyttäjäprofiiliin ilman järjestelmänvalvojan oikeuk
 
 **Suorat linkit:** liitä albumilistan alla olevaan moniriviseen kenttään yksi tai useampi YouTube-videon tai albumisoittolistan https-linkki, **yksi linkki riville**, ja paina **Lataa linkit**. Kaikki linkit käsitellään samassa jonossa syöttämässäsi järjestyksessä. Tyhjät rivit ja täsmälleen samat toistuvat linkit ohitetaan. Jos jokin rivi on virheellinen, korjaa ilmoitettu rivi ennen latauksen aloitusta.
 
-Linkit ladataan peräkkäin; jokaisen albumin tai videon musiikki tallennetaan omiin artisti- ja albumikansioihinsa. Latauspalkki ja aika-arvio koskevat koko linkkijonoa. Myös Spotify-tilassa voit liittää useita sen palvelun linkkejä yksi riville.
+Linkit ladataan peräkkäin; jokaisen albumin tai videon musiikki tallennetaan valitun kansiomuodon mukaisesti. Latauspalkki ja aika-arvio koskevat koko linkkijonoa. Myös Spotify-tilassa voit liittää useita sen palvelun linkkejä yksi riville.
 
 ## Spotify ja spotDL
 
@@ -56,7 +56,7 @@ Spotify-artistihaku on korjattu: testissä **Eppu Normaali** löytyi nimellä ja
 
 ## Kansiot ja albumien järjestys
 
-**Kansiomuoto**-valitsimella on kaksi vaihtoehtoa, jotka toimivat molemmilla latauslähteillä:
+**Kansiomuoto**-valitsimella on kolme vaihtoehtoa, jotka toimivat molemmilla latauslähteillä:
 
 ```text
 Albumi, Vuosi (oletus):
@@ -66,6 +66,11 @@ Musiikki/
         ├── 01 - Kappale.flac
         └── 02 - Toinen kappale.flac
 
+Suoraan tallennuskansioon:
+Musiikki/
+├── Kappale [tunniste].flac
+└── Toinen kappale [tunniste].flac
+
 Vuosi - Albumi:
 Musiikki/
 └── Artisti/
@@ -74,11 +79,15 @@ Musiikki/
     └── 2020 - Vanhempi albumi/
 ```
 
-Kappaletiedostojen tarkka nimi riippuu latauslähteestä. YouTube-nimissä on mukana videon tunniste, Spotify-nimissä levy- ja kappalenumero.
+Valitse **Suoraan tallennuskansioon**, kun haluat kappaleet suoraan valitsemaasi kansioon ilman artisti- ja albumialikansioita. Tämä toimii molemmilla latauslähteillä, myös usean linkin jonossa. Esimerkiksi tallennuskansio `D:\Musiikki` tarkoittaa, että kappaleet tulevat suoraan siihen. Valinta tallentuu asetuksiin.
+
+Kappaletiedostojen tarkka nimi riippuu latauslähteestä. YouTube-nimissä on mukana videon tunniste. Spotify-nimissä on tavallisesti levy- ja kappalenumero; suorassa tallennuksessa nimi on **[Spotify-tunniste] Artisti - Kappale**, jotta samannimiset kappaleet eivät korvaa toisiaan.
+
+Valinta ei siirrä aiemmin ladattuja tiedostoja. Spotify käyttää suorassa tallennuksessa erillistä lataushistoriaa, joten aiemmat albumikansioihin tehdyt lataukset eivät estä saman kappaleen lataamista suoraan tallennuskansioon.
 
 - Albumilista ja valittujen julkaisujen latausjono ovat **uusimmasta vanhimpaan julkaisuvuoden perusteella**, kansiomuodosta riippumatta. Saman vuoden julkaisut ovat nimen mukaan. Tuntemattomat vuodet tulevat viimeiseksi.
 - Jos haluat myös Resurssienhallinnan albumikansiot uusimmasta vanhimpaan, valitse **Vuosi - Albumi** ja Resurssienhallinnassa lajittelu **Nimi, laskeva**. Sovellus ei muuta Resurssienhallinnan asetuksia.
-- Suoran YouTube-linkin kansiot perustuvat kanavan ja soittolistan nimeen. Vuosiluku lisätään, jos julkaisuvuosi löytyy tiedoista.
+- Albumikansioita käytettäessä suoran YouTube-linkin kansiot perustuvat kanavan ja soittolistan nimeen. Vuosiluku lisätään, jos julkaisuvuosi löytyy tiedoista.
 - Paina **Avaa kansio** nähdäksesi tallennetut kappaleet.
 - Kansiomuodon vaihtaminen koskee seuraavia latauksia. Se ei nimeä jo ladattuja kansioita uudelleen. Eri muoto voi siksi luoda samasta albumista toisen kansion.
 
@@ -165,4 +174,4 @@ Lähdekoodi on `lahdekoodi/`-kansiossa. Rakentaminen vaatii Windowsin, Python 3.
 
 Skripti asentaa Python-riippuvuudet, ajaa testit, lataa lukitut taustatyökalut ja tarkistaa niiden SHA-256:t sekä rakentaa `dist/`-kansioon asentajan, portable-paketin ja tarkistussummat. Versiot ja latausosoitteet ovat tiedostossa `lahdekoodi/tools-lock.json`. Kolmansien osapuolten lisenssit ja lähteet on kuvattu tiedostossa [THIRD_PARTY.md](THIRD_PARTY.md).
 
-Uutta versiota varten päivitä `VERSION` tiedostossa `lahdekoodi/app.py` ja julkaise vastaava Git-tagi, esimerkiksi seuraavana korjauspäivityksenä `v1.1.5`. GitHub Actions testaa ja paketoi sovelluksen sekä julkaisee asentajan, portable-paketin ja tarkistussummat. Pysyvä AppId mahdollistaa päivityksen nykyisen asennuksen paikalle. Sovelluksen päivitystarkistus käyttää uusinta vakaata GitHub-julkaisua.
+Uutta versiota varten päivitä `VERSION` tiedostossa `lahdekoodi/app.py` ja julkaise vastaava Git-tagi, esimerkiksi seuraavana korjauspäivityksenä `v1.1.6`. GitHub Actions testaa ja paketoi sovelluksen sekä julkaisee asentajan, portable-paketin ja tarkistussummat. Pysyvä AppId mahdollistaa päivityksen nykyisen asennuksen paikalle. Sovelluksen päivitystarkistus käyttää uusinta vakaata GitHub-julkaisua.

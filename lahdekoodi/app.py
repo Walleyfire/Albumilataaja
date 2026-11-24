@@ -19,7 +19,8 @@ import webbrowser
 import requests
 from ytmusicapi import YTMusic
 
-VERSION = '1.1.4'
+VERSION = '1.1.5'
+FLAT_LAYOUT = 'Suoraan tallennuskansioon'
 REPOSITORY = 'Walleyfire/Albumilataaja'
 BASE = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
 TOOLS = BASE / 'tools'
@@ -43,6 +44,10 @@ def album_folder(title,year,layout='Vuosi - Albumi'):
     year=release_year(year)
     if layout=='Albumi, Vuosi': return safe_name(title+(', '+year if year else ''))
     return safe_name((year+' - ' if year else '')+title)
+
+def download_folder(root,artist,title,year,layout):
+    if layout==FLAT_LAYOUT: return Path(root)
+    return Path(root)/safe_name(artist)/album_folder(title,year,layout)
 
 def newest_first(albums):
     return sorted(albums,key=lambda a:(-(int(release_year(a.get('year'))) if release_year(a.get('year')) else 0),a.get('title','').casefold()))
@@ -77,11 +82,14 @@ def spotify_url(value):
 
 def spot_command(url, root, fmt,layout='Vuosi - Albumi',cookie_file=''):
     album='{album}, {year}' if layout=='Albumi, Vuosi' else '{year} - {album}'
+    flat=layout==FLAT_LAYOUT
+    output=root/'[{track-id}] {artist} - {title}.{output-ext}' if flat else root/'{album-artist}'/album/'{disc-number}-{track-number} - {title}.{output-ext}'
+    archive=root/(('.spotdl-archive-direct-' if flat else '.spotdl-archive-')+fmt+'.txt')
     return [str(TOOLS/'spotdl.exe'), 'download', spotify_url(url), '--headless',
             *(['--cookie-file',validate_cookie_file(cookie_file)] if cookie_file else []),
             '--ffmpeg', str(TOOLS/'ffmpeg.exe'), '--format', fmt, '--threads', '1',
-            '--output', str(root/'{album-artist}'/album/'{disc-number}-{track-number} - {title}.{output-ext}'),
-            '--overwrite', 'skip', '--archive', str(root/('.spotdl-archive-'+fmt+'.txt')),
+            '--output', str(output),
+            '--overwrite', 'skip', '--archive', str(archive),
             '--simple-tui', '--print-errors', '--max-retries', '3',
             '--max-filename-length', '170']
 
@@ -349,7 +357,7 @@ class App(ctk.CTk):
                         if not playlist: raise ValueError('Albumin soittolistaa ei löytynyt: '+item['title'])
                         url='https://www.youtube.com/playlist?list='+playlist
                         name=item['title']; owner=artist; year=item.get('year') or details.get('year')
-                    folder=root/safe_name(owner)/album_folder(name,year,layout); folder.mkdir(parents=True,exist_ok=True)
+                    folder=download_folder(root,owner,name,year,layout); folder.mkdir(parents=True,exist_ok=True)
                     self.emit('status',f'{number}/{len(items)} • {name}'); self.emit('log','Ladataan: '+str(folder))
                     code=self.execute(command(url,folder,fmt,cookie_file),tracking=True)
                     if self.youtube_auth_required:
