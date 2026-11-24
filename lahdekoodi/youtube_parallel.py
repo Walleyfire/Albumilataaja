@@ -2,6 +2,7 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import json
+import hashlib
 import os
 from pathlib import Path
 import re
@@ -10,6 +11,7 @@ import tempfile
 import threading
 from queue_progress import PROGRESS, TRACK_DONE, PARALLEL_PROGRESS
 from youtube_session import isolated_cookie_arguments, requires_youtube_auth
+from download_rows import row_event
 
 NO_WINDOW=getattr(subprocess,'CREATE_NO_WINDOW',0)
 OUTPUT_LOCK=threading.Lock()
@@ -32,6 +34,11 @@ class Batch:
         self.emit(PARALLEL_PROGRESS+json.dumps({'total':len(self.tasks),'completed':len(self.completed),
             'partial':sum(self.partial.values()),'failed':len(self.failed),'running':len(self.partial)}))
 
+    def row(self,number,task,**values):
+        key='youtube:'+hashlib.sha256((str(task.get('archive',''))+'|'+str(task.get('id',number))).encode()).hexdigest()
+        row_event(self.emit,key,title=task.get('title') or task.get('id') or 'Kappale',
+                  artist=task.get('artist',''),album=task.get('album',''),source='YouTube',**values)
+
     def halt(self):
         with self.lock:
             self.authentication=True; self.stopped.set()
@@ -53,15 +60,17 @@ class Batch:
         if self.stopped.is_set(): return
         with self.lock:
             self.partial[number]=0.; self.report()
-        failed=False; process=None
+        failed=False; process=None; skipped=False; last_error=''; filename=''
         try:
             if task.get('error'): raise ValueError(task['error'])
             archive=Path(task['archive'])
             with self.archives_lock:
                 archived=set(archive.read_text(encoding='utf-8').splitlines()) if archive.exists() else set()
             if 'youtube '+task['id'] in archived:
+                skipped=True
                 self.emit(f"[{number+1}/{len(self.tasks)}] Ohitetaan jo ladattu kappale: {task['id']}")
                 return
+            self.row(number,task,stage='downloading',percent=0)
             with tempfile.TemporaryDirectory(prefix='track-',dir=self.workspace) as temporary:
                 private_archive=Path(temporary)/'archive.txt'
                 args=list(task['command'])
@@ -81,14 +90,22 @@ class Batch:
                             line=raw.strip()
                             if line.startswith((PROGRESS,TRACK_DONE)):
                                 try:
-                                    if line.startswith(TRACK_DONE): fraction=.99
+                                    if line.startswith(TRACK_DONE):
+                                        fraction=.99
+                                        done=json.loads(line[len(TRACK_DONE):]);filename=done.get('filename','')
                                     else:
                                         data=json.loads(line[len(PROGRESS):]); total=float(data.get('total') or 0)
                                         fraction=min(.9,.9*float(data.get('downloaded') or 0)/total) if total>0 else 0.
+                                    self.row(number,task,stage='converting' if line.startswith(TRACK_DONE) else 'downloading',percent=fraction*100,filename=filename)
                                     with self.lock:
                                         self.partial[number]=max(self.partial[number],fraction); self.report()
                                 except (ValueError,TypeError,ZeroDivisionError): pass
                             elif line:
+                                if line.startswith('ERROR:') or requires_youtube_auth(line):
+                                    last_error=line.removeprefix('ERROR:').strip()
+                                    self.row(number,task,stage='error',error=last_error)
+                                elif line.startswith(('[ExtractAudio]','[Metadata]')):
+                                    self.row(number,task,stage='converting',percent=90)
                                 self.emit(f'[{number+1}/{len(self.tasks)}] {line}')
                                 if requires_youtube_auth(line): self.halt(); break
                         failed=bool(process.wait())
@@ -98,16 +115,21 @@ class Batch:
                         self.merge_archive(private_archive,archive)
                         with self.lock: self.processes.discard(process)
         except Exception as error:
-            failed=True; self.emit(f'ERROR: [{number+1}/{len(self.tasks)}] {error}')
+            failed=True; last_error=str(error)
+            self.row(number,task,stage='error',error=last_error)
+            self.emit(f'ERROR: [{number+1}/{len(self.tasks)}] {error}')
         finally:
             with self.lock:
                 self.partial.pop(number,None)
+                stage='error' if failed or last_error else ('cancelled' if self.stopped.is_set() else ('skipped' if skipped else 'done'))
+                self.row(number,task,stage=stage,error=last_error or ('Lataus epäonnistui. Katso tarkempi loki.' if failed else ''),filename=filename)
                 if not self.stopped.is_set():
                     self.completed.add(number)
                     if failed: self.failed.add(number)
                 self.report()
 
     def run(self):
+        for number,task in enumerate(self.tasks): self.row(number,task,stage='queued')
         with self.lock: self.report()
         with ThreadPoolExecutor(max_workers=self.workers) as pool:
             # Workers check the stop event before creating another process.
@@ -142,7 +164,9 @@ def prepare_tasks(jobs,cookies,workspace,emit=output):
                 key=(os.path.normcase(str(Path(archive).resolve())),video)
                 if key in seen: continue
                 seen.add(key)
-                tasks.append({'command':args,'id':video,'index':index,'archive':archive})
+                tasks.append({'command':args,'id':video,'index':index,'archive':archive,
+                              'title':entry.get('title') or video,'artist':job.get('artist') or entry.get('channel') or '',
+                              'album':job.get('album','')})
         except Exception as error:
             tasks.append({'error':str(error)})
     return tasks

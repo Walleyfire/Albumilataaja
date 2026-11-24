@@ -9,17 +9,19 @@ import sys
 import tempfile
 import threading
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import filedialog, messagebox
 import customtkinter as ctk
-from appearance import build_interface, apply_theme
+from appearance import build_interface, apply_theme, dark_titlebar
 from queue_progress import QueueProgress, PROGRESS, TRACK_DONE
+from download_rows import DownloadRows,parse_row
+from tool_updates import check_updates as check_tool_releases,install_updates as install_tool_releases,newer
+from tool_dialog import ToolDialog
 from youtube_session import validate_cookie_file, requires_youtube_auth, AUTH_HELP, isolated_cookie_arguments
 from urllib.parse import urlparse
 import webbrowser
 import requests
-from ytmusicapi import YTMusic
 
-VERSION = '1.2.1'
+VERSION = '1.3.0'
 FLAT_LAYOUT = 'Suoraan tallennuskansioon'
 REPOSITORY = 'Walleyfire/Albumilataaja'
 BASE = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
@@ -107,7 +109,7 @@ def command(url, folder, fmt,cookie_file=''):
             '--retries', '3', '--no-overwrites', '--yes-playlist', '-f', 'bestaudio/best',
             '-x', '--audio-format', fmt, '--embed-metadata', '--no-simulate', '--progress', '--progress-delta', '0.5',
             '--progress-template', 'download:'+PROGRESS+'{"downloaded":%(progress.downloaded_bytes|0)j,"total":%(progress.total_bytes,progress.total_bytes_estimate|0)j,"index":%(info.playlist_index|1)j,"count":%(info.n_entries,info.playlist_count|1)j}',
-            '--print', 'after_move:'+TRACK_DONE+'{"index":%(playlist_index|1)j,"count":%(n_entries,playlist_count|1)j}',
+            '--print', 'after_move:'+TRACK_DONE+'{"index":%(playlist_index|1)j,"count":%(n_entries,playlist_count|1)j,"filename":%(filepath|)j}',
             '--download-archive', str(folder/('.archive-'+fmt+'.txt')),
             '-P', str(folder), '-o', '%(playlist_index|1)02d - %(title).140s [%(id)s].%(ext)s', '--', youtube_url(url)]
 
@@ -120,40 +122,69 @@ class App(ctk.CTk):
         self.title('Albumilataaja · Esikatselu' if PREVIEW else 'Albumilataaja')
         self.geometry('1180x960'); self.minsize(1040,900)
         self.events=queue.Queue(); self.proc=None; self.busy=False
-        self.cancel=threading.Event(); self.artists=[]; self.albums=[]; self.artist=''; self.album_source=''
+        self.cancel=threading.Event()
         try:
             settings_path=CONFIG if CONFIG.exists() or not PREVIEW else STATE/'settings.json'
             settings=json.loads(settings_path.read_text(encoding='utf-8'))
         except (OSError,ValueError): settings={}
         self.destination=tk.StringVar(value=settings.get('destination',str(Path.home()/'Music'/'Albumilataaja')))
-        self.query=tk.StringVar(); self.artist_choice=tk.StringVar()
-        self.format=tk.StringVar(value=settings.get('format','flac')); self.singles=tk.BooleanVar(value=True)
+        self.format=tk.StringVar(value=settings.get('format','flac'))
         self.source=tk.StringVar(value=settings.get('source','YouTube'))
         self.layout=tk.StringVar(value=settings.get('layout','Albumi, Vuosi'))
         self.parallel=tk.StringVar(value=str(download_workers(settings.get('parallel_downloads',2))))
-        self.status=tk.StringVar(value='Hae artisti tai liitä valitun palvelun linkki.')
+        self.status=tk.StringVar(value='Liitä valitun palvelun linkit, yksi linkki riville.')
         self.cookie_file=tk.StringVar(value=settings.get('youtube_cookie_file',''))
         self.youtube_auth_required=False
         self.queue_summary=tk.StringVar(value=''); self.queue_tracker=QueueProgress()
+        self.download_rows=DownloadRows(); self.active_download=False; self.download_error=''
         build_interface(self,settings,preview=PREVIEW)
         self.protocol('WM_DELETE_WINDOW',self.close); self.after(100,self.poll)
         self.source_changed()
         if not PREVIEW: self.after(1800,lambda:self.check_updates(False))
 
     def emit(self,kind,data): self.events.put((kind,data))
+    def reset_download_rows(self):
+        self.download_rows.clear();self.active_download=True;self.download_error='';self.download_table.render()
+    def open_tools(self):
+        dialog=getattr(self,'tools_dialog',None)
+        if dialog is not None and dialog.winfo_exists():dialog.lift();return
+        self.tools_dialog=ToolDialog(self)
+        self.tools_dialog.after(200,lambda:dark_titlebar(self.tools_dialog))
+    def check_tools(self,dialog):
+        dialog.checking()
+        def work():self.emit('tools_checked',(dialog,check_tool_releases(TOOLS)))
+        threading.Thread(target=work,daemon=True).start()
+    def install_tools(self,dialog):
+        if self.busy:dialog.message.configure(text='Työkalupäivitykset voi asentaa latausten valmistuttua.');return
+        selected=dialog.selected()
+        if not selected:return
+        dialog.check.configure(state='disabled');dialog.install.configure(state='disabled')
+        def work():
+            try:
+                versions=install_tool_releases(selected,TOOLS,self.cancel,lambda text:self.emit('tool_status',(dialog,text)))
+                rows=[dict(row) for row in dialog.rows]
+                for row in rows:
+                    row['current']=versions[row['key']];row['available']=newer(row['latest'],row['current'])
+                    row['can_update']=row['available'] and not row['managed'] and not row['error']
+                self.emit('tools_updated',(dialog,rows));self.emit('status','Valitut työkalut on päivitetty. Uudelleenkäynnistystä ei tarvita.')
+            except Exception as error:
+                self.emit('tools_failed',(dialog,str(error)))
+                if self.cancel.is_set():self.emit('status','Työkalupäivitys keskeytetty.')
+                else:raise
+        self.run_job(work)
     def toggle_console(self):
         self.console_visible=not self.console_visible
         if self.console_visible:
-            self.log_frame.pack(fill='x'); self.console_button.configure(text='Piilota console'); self.minsize(1040,900)
+            self.log_frame.pack(fill='x'); self.console_button.configure(text='Piilota loki'); self.minsize(1040,900)
         else:
-            self.log_frame.pack_forget(); self.console_button.configure(text='Näytä console'); self.minsize(1040,800)
+            self.log_frame.pack_forget(); self.console_button.configure(text='Näytä loki'); self.minsize(1040,800)
     def log_line(self,line):
         self.log.configure(state='normal'); self.log.insert('end',line+'\n')
         if int(self.log.index('end-1c').split('.')[0])>500: self.log.delete('1.0','100.0')
         self.log.see('end'); self.log.configure(state='disabled')
     def set_busy(self,value):
         self.busy=value
-        for b in [self.search_btn,self.album_btn,self.download_btn,self.link_btn]: b.configure(state='disabled' if value else 'normal')
+        for b in [self.link_btn]: b.configure(state='disabled' if value else 'normal')
         self.stop_btn.configure(state='normal' if value else 'disabled')
         self.progress.start(12) if value else self.progress.stop()
         self.source_combo.configure(state='disabled' if value else 'readonly')
@@ -162,17 +193,12 @@ class App(ctk.CTk):
         if not value: self.source_changed()
     def source_changed(self):
         spotify=self.source.get()=='Spotify (spotDL)'
-        self.source_note.configure(text='Spotify-tiedot, ääni YouTubesta.' if spotify else 'Artistihaku ja albumit YouTube Musicista.')
+        self.source_note.configure(text='Spotify-tiedot, ääni YouTubesta.' if spotify else 'YouTube-videot ja soittolistat.')
         self.link_note.configure(text='Yksi Spotify-linkki riville: artisti, albumi, soittolista tai kappale. Linkit ladataan samassa jonossa.' if spotify else 'Liitä YouTube-linkit yksi linkki riville. Videot ja albumisoittolistat ladataan samassa jonossa.')
-        self.search_btn.configure(text='Hae artisti')
-        self.album_btn.configure(state='normal')
-        self.download_btn.configure(state='normal' if self.album_source==self.source.get() and self.albums else 'disabled')
-        self.combo.configure(state='readonly')
         apply_theme(self)
     def source_switched(self):
-        self.artists=[]; self.albums=[]; self.album_source=''; self.artist_choice.set(''); self.combo['values']=[]
-        self.tree.delete(*self.tree.get_children()); self.empty_label.place(relx=.5,rely=.55,anchor='center'); self.direct.set(''); self.source_changed()
-        self.status.set('Kirjoita artistin nimi tai liitä valitun palvelun linkki.')
+        self.direct.set('');self.source_changed()
+        self.status.set('Liitä valitun palvelun linkit, yksi linkki riville.')
     def run_job(self,fn):
         if self.busy: return
         self.queue_tracker.reset(); self.queue_summary.set('')
@@ -185,45 +211,41 @@ class App(ctk.CTk):
                 self.emit('done',None)
         threading.Thread(target=work,daemon=True).start()
     def poll(self):
+        rows_changed=False
         try:
             while True:
                 kind,data=self.events.get_nowait()
                 if kind=='log': self.log_line(data)
                 elif kind=='status': self.status.set(data)
-                elif kind=='error': self.status.set('Toiminto epäonnistui.'); self.log_line(data); messagebox.showerror('Albumilataaja',data)
-                elif kind=='done': self.set_busy(False)
-                elif kind=='artists':
-                    self.artists=data; self.combo['values']=[a['artist'] for a in data]
-                    if data: self.combo.current(0); self.status.set('Valitse oikea artisti ja paina Näytä julkaisut.')
-                    else: self.status.set('Artisteja ei löytynyt.')
-                elif kind=='albums':
-                    self.artist,albums=data; self.albums=newest_first(albums); self.album_source=self.source.get(); self.tree.delete(*self.tree.get_children())
-                    for i,a in enumerate(self.albums): self.tree.insert('', 'end',iid=str(i),values=(a['title'],a.get('year',''),a['kind']),tags=('even' if i%2==0 else 'odd',))
-                    self.artist_choice.set(self.artist)
-                    self.empty_label.place_forget() if self.albums else self.empty_label.place(relx=.5,rely=.55,anchor='center')
-                    self.status.set(f'{self.artist}: {len(self.albums)} julkaisua. Valitse haluamasi tai Valitse kaikki.')
+                elif kind=='download_row': self.download_rows.update(data); rows_changed=True
+                elif kind in ('tools_checked','tools_updated'):
+                    dialog,rows=data
+                    if dialog.winfo_exists():dialog.show_versions(rows)
+                elif kind=='tool_status':
+                    dialog,text=data;self.status.set(text)
+                    if dialog.winfo_exists():dialog.message.configure(text=text)
+                elif kind=='tools_failed':
+                    dialog,text=data
+                    if dialog.winfo_exists():dialog.show_versions(dialog.rows);dialog.message.configure(text=text)
+                elif kind=='error':
+                    if self.active_download:self.download_error=str(data)
+                    self.status.set('Toiminto epäonnistui.'); self.log_line(data); messagebox.showerror('Albumilataaja',data)
+                elif kind=='done':
+                    if self.active_download:
+                        stopped=self.cancel.is_set() or self.youtube_auth_required
+                        error='Jono pysäytetty: YouTube pyytää varmistusta.' if self.youtube_auth_required else self.download_error
+                        self.download_rows.finish(cancelled=stopped,error=error);rows_changed=True;self.active_download=False
+                    self.set_busy(False)
                 elif kind=='update': self.offer_update(data)
                 elif kind=='current': messagebox.showinfo('Päivitykset','Sovellus on ajan tasalla.')
                 elif kind=='exit_for_update': self.save_settings(); self.destroy(); return
                 elif kind=='youtube_auth': self.status.set('YouTube pyytää kirjautumista tai varmistusta. Jono pysäytetty.'); messagebox.showwarning('YouTube-kirjautuminen',AUTH_HELP)
         except queue.Empty: pass
+        if rows_changed:self.download_table.render()
         snapshot=self.queue_tracker.snapshot()
         if snapshot:
             self.queue_summary.set(snapshot['text']); self.progress.show_fraction(snapshot['fraction'])
         self.after(100,self.poll)
-    def search(self):
-        query=self.query.get().strip()
-        if not query: return
-        if self.source.get()=='Spotify (spotDL)':
-            self.search_spotify(query); return
-        self.status.set('Haetaan artisteja…')
-        self.run_job(lambda:self.emit('artists',YTMusic(requests_session=requests.Session()).search(query,filter='artists',limit=12)))
-    def search_spotify(self,query):
-        self.status.set('Haetaan Spotify-artisteja…')
-        self.run_job(lambda:self.catalog_event('search',query,'artists'))
-    def catalog_event(self,operation,value,event,include_singles=True,artist=''):
-        data=self.catalog_data(operation,value,include_singles)
-        if data is not None: self.emit(event,(artist,data[event]) if event=='albums' else data[event])
     def catalog_data(self,operation,value,include_singles=True):
         with tempfile.TemporaryDirectory(prefix='Albumilataaja-catalog-') as temporary:
             output=Path(temporary)/'result.json'
@@ -241,24 +263,6 @@ class App(ctk.CTk):
             key='artists' if operation=='search' else 'albums'
             if key not in data: raise RuntimeError('Spotify-haku palautti puutteelliset tiedot.')
             return data
-    def load_albums(self):
-        index=self.combo.current()
-        if index<0: return
-        chosen=self.artists[index]; include=self.singles.get()
-        self.status.set('Haetaan artistin julkaisuja…')
-        if self.source.get()=='Spotify (spotDL)':
-            self.run_job(lambda:self.catalog_event('albums',chosen['spotify_id'],'albums',include,chosen['artist'])); return
-        def work():
-            y=YTMusic(); artist=y.get_artist(chosen['browseId']); albums=[]; seen=set()
-            for section,kind in [('albums','Albumi')]+([('singles','Single / EP')] if include else []):
-                group=artist.get(section) or {}; entries=group.get('results',[])
-                if group.get('params'): entries=y.get_artist_albums(group.get('browseId') or chosen['browseId'],group['params'],limit=None)
-                for a in entries:
-                    if self.cancel.is_set(): return
-                    key=a.get('browseId') or a.get('audioPlaylistId')
-                    if key and key not in seen: seen.add(key); albums.append(dict(a,kind=kind))
-            self.emit('albums',(artist.get('name',chosen['artist']),albums))
-        self.run_job(work)
     def choose_folder(self):
         folder=filedialog.askdirectory()
         if folder: self.destination.set(folder)
@@ -267,7 +271,7 @@ class App(ctk.CTk):
             p=Path(self.destination.get()).expanduser(); p.mkdir(parents=True,exist_ok=True); os.startfile(p)
         except OSError as e: messagebox.showerror('Kansio',str(e))
     def save_settings(self):
-        CONFIG.write_text(json.dumps({'destination':self.destination.get(),'format':self.format.get(),'source':self.source.get(),'layout':self.layout.get(),'parallel_downloads':download_workers(self.parallel.get()),'show_console':self.console_visible,'youtube_cookie_file':self.cookie_file.get()},ensure_ascii=False),encoding='utf-8')
+        CONFIG.write_text(json.dumps({'destination':self.destination.get(),'format':self.format.get(),'source':self.source.get(),'layout':self.layout.get(),'parallel_downloads':download_workers(self.parallel.get()),'show_console':self.console_visible,'show_details':self.console_visible,'youtube_cookie_file':self.cookie_file.get()},ensure_ascii=False),encoding='utf-8')
     def choose_youtube_cookies(self):
         if self.busy: return
         path=filedialog.askopenfilename(title='Valitse itse viemäsi YouTube cookies.txt',filetypes=[('Netscape-evästeet','*.txt'),('Kaikki tiedostot','*.*')])
@@ -285,11 +289,6 @@ class App(ctk.CTk):
     def selected_cookies(self):
         try: return validate_cookie_file(self.cookie_file.get())
         except ValueError as error: messagebox.showerror('YouTube-evästeet',str(error)); return None
-    def download_selected(self):
-        items=[dict(self.albums[int(i)]) for i in self.tree.selection()]
-        if not items: messagebox.showinfo('Valitse julkaisut','Valitse ensin vähintään yksi julkaisu.'); return
-        if self.source.get()=='Spotify (spotDL)': self.download_spotify([a['spotify_url'] for a in items])
-        else: self.start_download(items,self.artist)
     def download_link(self):
         if self.busy: return
         if self.source.get()=='Spotify (spotDL)':
@@ -303,9 +302,10 @@ class App(ctk.CTk):
             urls=[spotify_url(u) for u in urls] if urls is not None else download_links(self.direct.get(),spotify_url)
             root=Path(self.destination.get()).expanduser().resolve()
         except ValueError as e: messagebox.showerror('Linkki',str(e)); return
-        fmt=self.format.get(); layout=self.layout.get(); include_singles=self.singles.get(); workers=download_workers(self.parallel.get()); self.save_settings()
+        fmt=self.format.get(); layout=self.layout.get(); include_singles=True; workers=download_workers(self.parallel.get()); self.save_settings()
         cookie_file=self.selected_cookies()
         if cookie_file is None: return
+        self.reset_download_rows()
         def work():
             root.mkdir(parents=True,exist_ok=True)
             for name in ['spotdl.exe','yt-dlp.exe','ffmpeg.exe','ffprobe.exe','deno.exe']:
@@ -351,48 +351,32 @@ class App(ctk.CTk):
         self.run_job(work)
     def start_download(self,items,artist):
         if self.busy: return
-        missing=[name for name in ['yt-dlp.exe','ffmpeg.exe','ffprobe.exe','deno.exe'] if not (TOOLS/name).exists()]
+        names=['yt-dlp.exe','ffmpeg.exe','ffprobe.exe','deno.exe']+(['youtube-parallel.exe'] if getattr(sys,'frozen',False) else [])
+        missing=[name for name in names if not (TOOLS/name).exists()]
         if missing: messagebox.showerror('Puuttuvia tiedostoja','Asenna sovellus uudelleen: '+', '.join(missing)); return
         root=Path(self.destination.get()).expanduser().resolve(); fmt=self.format.get(); layout=self.layout.get(); workers=download_workers(self.parallel.get()); self.save_settings()
         cookie_file=self.selected_cookies()
         if cookie_file is None: return
+        self.reset_download_rows()
         def work():
-            y=YTMusic(); failures=0; jobs=[]
-            if workers==1: self.queue_tracker.begin(len(items))
+            failures=0; jobs=[]
             for number,item in enumerate(items,1):
                 if self.cancel.is_set(): break
-                if workers==1: self.queue_tracker.start_task(number-1)
-                task_failed=False
                 try:
-                    if item.get('url'):
-                        url=item['url']; info=self.inspect_url(url,cookie_file)
-                        name=info.get('title') or 'YouTube'; owner=info.get('artist') or info.get('uploader') or info.get('channel') or 'YouTube'
-                        year=info.get('release_year') or info.get('release_date')
-                        entries=info.get('entries') or []
-                        if not year and entries: year=(entries[0] or {}).get('release_year') or (entries[0] or {}).get('release_date')
-                    else:
-                        details=y.get_album(item['browseId']) if not item.get('audioPlaylistId') else item
-                        playlist=details.get('audioPlaylistId')
-                        if not playlist: raise ValueError('Albumin soittolistaa ei löytynyt: '+item['title'])
-                        url='https://www.youtube.com/playlist?list='+playlist
-                        name=item['title']; owner=artist; year=item.get('year') or details.get('year')
+                    url=youtube_url(item['url']); info=self.inspect_url(url,cookie_file)
+                    name=info.get('title') or 'YouTube'; owner=info.get('artist') or info.get('uploader') or info.get('channel') or 'YouTube'
+                    year=info.get('release_year') or info.get('release_date')
+                    entries=info.get('entries') or []
+                    if not year and entries:year=(entries[0] or {}).get('release_year') or (entries[0] or {}).get('release_date')
                     folder=download_folder(root,owner,name,year,layout); folder.mkdir(parents=True,exist_ok=True)
-                    if workers>1:
-                        jobs.append({'command':command(url,folder,fmt)})
-                        self.emit('status',f'Valmistellaan latausjonoa: {number}/{len(items)} • {name}')
-                        continue
-                    self.emit('status',f'{number}/{len(items)} • {name}'); self.emit('log','Ladataan: '+str(folder))
-                    code=self.execute(command(url,folder,fmt,cookie_file),tracking=True)
-                    if self.youtube_auth_required:
-                        self.emit('youtube_auth',None); return
-                    if code and not self.cancel.is_set(): task_failed=True; failures+=1; self.emit('log','Julkaisuun jäi virheitä. Tarkista yllä olevat tiedot ja yritä uudelleen.')
+                    jobs.append({'command':command(url,folder,fmt),'album':name,'artist':owner or ''})
+                    self.emit('status',f'Valmistellaan latausjonoa: {number}/{len(items)} • {name}')
                 except Exception as e:
+                    self.emit('download_row',{'id':f'youtube:prepare:{number}','title':item.get('title') or item.get('url') or 'Julkaisu','source':'YouTube','stage':'error','error':str(e)})
                     if self.youtube_auth_required:
                         self.emit('youtube_auth',None); return
-                    if not self.cancel.is_set(): task_failed=True; failures+=1; self.emit('log',str(e))
-                finally:
-                    if workers==1 and not self.cancel.is_set() and not self.youtube_auth_required: self.queue_tracker.finish_task(number-1,failed=task_failed)
-            if workers>1 and jobs and not self.cancel.is_set():
+                    if not self.cancel.is_set(): failures+=1; self.emit('log',str(e))
+            if jobs and not self.cancel.is_set():
                 self.queue_tracker.begin(1)
                 with tempfile.TemporaryDirectory(prefix='Albumilataaja-queue-') as temporary:
                     manifest=Path(temporary)/'queue.json'; manifest.write_text(json.dumps(jobs),encoding='utf-8')
@@ -400,6 +384,7 @@ class App(ctk.CTk):
                     args=[str(worker)] if getattr(sys,'frozen',False) else [sys.executable,str(Path(__file__).with_name('youtube_parallel.py'))]
                     args += [str(manifest),'--workers',str(workers)]
                     if cookie_file: args+=['--cookies',cookie_file]
+                    self.emit('status',f'YouTube: enintään {workers} samanaikaista latausta…')
                     code=self.execute(args,tracking=True)
                     if self.youtube_auth_required: self.emit('youtube_auth',None); return
                     if code or self.download_errors: failures+=1
@@ -431,6 +416,12 @@ class App(ctk.CTk):
                     return out
                 for line in p.stdout:
                     line=line.strip()
+                    row=parse_row(line)
+                    if row is not None:
+                        if row:
+                            self.emit('download_row',row)
+                            if row.get('stage')=='error':self.download_errors=True
+                        continue
                     if requires_youtube_auth(line):
                         self.youtube_auth_required=True; self.download_errors=True
                         self.emit('log','YouTube pyytää kirjautumista tai manuaalista varmistusta. Jono pysäytettiin.')

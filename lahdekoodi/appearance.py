@@ -2,8 +2,8 @@
 import ctypes
 import os
 import tkinter as tk
-from tkinter import ttk
 import customtkinter as ctk
+from download_table import DownloadTable
 
 BG='#080808'
 PANEL='#121212'
@@ -82,6 +82,8 @@ def build_interface(app,settings,preview=False):
     label(brand,'Oma musiikkikirjastosi',font=('Segoe UI',12)).pack(anchor='w')
     app.update_button=button(header,'Tarkista päivitykset',lambda:app.check_updates(True),width=166)
     app.update_button.pack(side='right')
+    app.tools_update_button=button(header,'Työkalujen päivitykset',app.open_tools,width=178)
+    app.tools_update_button.pack(side='right',padx=(8,10))
     if preview: label(header,'ESIKATSELU',font=('Segoe UI',10,'bold'),fg_color='#202020',corner_radius=9,width=100,height=28,anchor='center').pack(side='right',padx=12)
 
     sources=frame(outer); sources.pack(fill='x',pady=(16,12))
@@ -103,45 +105,11 @@ def build_interface(app,settings,preview=False):
     button(session,'YouTube-evästeet',app.choose_youtube_cookies,width=145,height=28,font=('Segoe UI',11)).pack(side='right')
     button(session,'Poista valinta',app.clear_youtube_cookies,width=110,height=28,font=('Segoe UI',11)).pack(side='right',padx=8)
 
-    artist_panel=ctk.CTkFrame(outer,fg_color=PANEL,corner_radius=16); artist_panel.pack(fill='x')
-    search=frame(artist_panel); search.pack(fill='x',padx=14,pady=(12,8))
-    app.search_entry=entry(search,app.query,'Kirjoita artistin nimi'); app.search_entry.pack(side='left',fill='x',expand=True)
-    app.search_entry.bind('<Return>',lambda event:app.search())
-    app.search_btn=button(search,'Hae artisti',app.search,True,width=150,height=40); app.search_btn.pack(side='left',padx=(10,0))
-    choose=frame(artist_panel); choose.pack(fill='x',padx=14,pady=(0,12))
-    app.combo=combo(choose,app.artist_choice,[],width=400); app.combo.pack(side='left',fill='x',expand=True)
-    app.singles_control=ctk.CTkCheckBox(choose,text='Singlet ja EP:t',variable=app.singles,font=('Segoe UI',12),
-                                    text_color='#bdbdbd',width=128,checkbox_width=18,checkbox_height=18,corner_radius=5,border_width=2)
-    app.singles_control.pack(side='left',padx=16)
-    app.album_btn=button(choose,'Näytä julkaisut',app.load_albums,width=150,height=36); app.album_btn.pack(side='left')
-
-    app.album_panel=ctk.CTkFrame(outer,fg_color=PANEL,corner_radius=16,border_width=1,border_color='#242424')
-    app.album_panel.pack(fill='both',expand=True,pady=(12,10))
-    bar=frame(app.album_panel); bar.pack(fill='x',padx=16,pady=(10,8))
-    label(bar,'Julkaisut',font=('Segoe UI',18,'bold'),text_color=TEXT).pack(side='left')
-    label(bar,'Uusimmat ensin',font=('Segoe UI',11)).pack(side='left',padx=14)
-    button(bar,'Valitse kaikki',lambda:app.tree.selection_set(app.tree.get_children()),width=118,height=30).pack(side='right')
-    tree_frame=tk.Frame(app.album_panel,bg=PANEL,bd=0,highlightthickness=0); tree_frame.pack(fill='both',expand=True,padx=12,pady=(0,12))
-    app.table_style=ttk.Style(app); app.table_style.theme_use('clam')
-    app.table_style.configure('Albums.Treeview',background=PANEL,fieldbackground=PANEL,foreground='#e5e5e5',
-                             rowheight=34,borderwidth=0,relief='flat',font=('Segoe UI',11))
-    app.table_style.configure('Albums.Treeview.Heading',background='#1c1c1c',foreground='#a6a6a6',font=('Segoe UI',10),
-                             padding=(10,7),borderwidth=0,relief='flat')
-    app.table_style.layout('Albums.Treeview',[('Treeview.treearea',{'sticky':'nswe'})])
-    app.table_style.map('Albums.Treeview.Heading',background=[('active','#282828')])
-    app.tree=ttk.Treeview(tree_frame,columns=('title','year','kind'),show='headings',selectmode='extended',height=2,style='Albums.Treeview')
-    for key,text,width,stretch in [('title','ALBUMI / JULKAISU',640,True),('year','VUOSI',90,False),('kind','TYYPPI',145,False)]:
-        app.tree.heading(key,text=text,anchor='w'); app.tree.column(key,width=width,minwidth=width if not stretch else 220,stretch=stretch,anchor='w')
-    app.tree.pack(fill='both',expand=True)
-    app.tree.tag_configure('even',background='#151515'); app.tree.tag_configure('odd',background='#121212')
-    app.empty_label=label(tree_frame,'Hae artisti nähdäksesi julkaisut',font=('Segoe UI',14),text_color='#777777',fg_color=PANEL,anchor='center')
-    app.empty_label.place(relx=.5,rely=.55,anchor='center')
-
     link=frame(outer); link.pack(fill='x')
     app.direct=LinkInput(link,height=76,corner_radius=11,fg_color=FIELD,border_color='#303030',border_width=1,
                         text_color=TEXT,font=('Segoe UI',13),wrap='none',activate_scrollbars=False)
     app.direct.pack(side='left',fill='x',expand=True)
-    app.link_btn=button(link,'Lataa linkit',app.download_link,width=150,height=40); app.link_btn.pack(side='left',padx=(10,0))
+    app.link_btn=button(link,'Lataa linkit',app.download_link,True,width=150,height=40); app.link_btn.pack(side='left',padx=(10,0))
     app.link_note=label(outer,font=('Segoe UI',10),height=18); app.link_note.pack(anchor='w',pady=(2,5))
 
     path=frame(outer); path.pack(fill='x',pady=(0,9))
@@ -155,24 +123,30 @@ def build_interface(app,settings,preview=False):
     combo(actions,app.format,['flac','opus','mp3','m4a'],width=94).pack(side='left')
     label(actions,'Kansiomuoto',width=100).pack(side='left',padx=(18,0))
     combo(actions,app.layout,['Albumi, Vuosi','Vuosi - Albumi','Suoraan tallennuskansioon'],width=210).pack(side='left')
-    app.download_btn=button(actions,'↓  Lataa valitut julkaisut',app.download_selected,True,width=228,height=40)
     app.stop_btn=button(actions,'Keskeytä',app.stop,width=104,height=40,state='disabled')
-    app.stop_btn.pack(side='right'); app.download_btn.pack(side='right',padx=(8,10))
+    app.stop_btn.pack(side='right')
     label(outer,'YouTuben äänen tallentaminen FLACiksi ei paranna alkuperäistä äänenlaatua.',font=('Segoe UI',10),text_color='#717171',height=18).pack(anchor='w',pady=(5,0))
+    app.download_panel=ctk.CTkFrame(outer,fg_color=PANEL,corner_radius=16,border_width=1,border_color='#242424')
+    app.download_panel.pack(fill='both',expand=True,pady=(12,6))
+    bar=frame(app.download_panel);bar.pack(fill='x',padx=16,pady=(10,8))
+    label(bar,'Lataukset',font=('Segoe UI',18,'bold'),text_color=TEXT).pack(side='left')
+    label(bar,'Kaksoisnapsauta riviä nähdäksesi tiedot',font=('Segoe UI',11)).pack(side='left',padx=16)
+    app.download_table=DownloadTable(app.download_panel,app.download_rows)
+    app.download_table.pack(fill='both',expand=True,padx=12,pady=(0,12))
     app.progress=Progress(outer,mode='determinate',height=4,corner_radius=2,fg_color='#242424'); app.progress.set(0)
     app.progress.pack(fill='x',pady=(7,5))
     label(outer,textvariable=app.queue_summary,text_color='#d0d0d0',font=('Segoe UI',11),height=20).pack(anchor='w')
     label(outer,textvariable=app.status,wraplength=1040,text_color='#bdbdbd',font=('Segoe UI',11),height=20).pack(anchor='w')
     log_header=frame(outer); log_header.pack(fill='x',pady=(3,4))
-    label(log_header,'Latausloki',font=('Segoe UI',11)).pack(side='left')
+    label(log_header,'Tarkempi latausloki',font=('Segoe UI',11)).pack(side='left')
     app.console_visible=True
-    app.console_button=button(log_header,'Piilota console',app.toggle_console,width=128,height=27,font=('Segoe UI',11))
+    app.console_button=button(log_header,'Piilota loki',app.toggle_console,width=128,height=27,font=('Segoe UI',11))
     app.console_button.pack(side='right')
     app.log_frame=ctk.CTkFrame(outer,fg_color='#101010',corner_radius=12); app.log_frame.pack(fill='x')
     app.log=tk.Text(app.log_frame,height=6,bg='#101010',fg='#bbbbbb',insertbackground=TEXT,font=('Consolas',10),
                     relief='flat',highlightthickness=0,state='disabled',wrap='word',padx=12,pady=8)
     app.log.pack(fill='both',expand=True,padx=3,pady=3)
-    if not settings.get('show_console',True): app.toggle_console()
+    if not settings.get('show_details',False): app.toggle_console()
     app.after(200,lambda:dark_titlebar(app))
 
 def apply_theme(app):
@@ -186,7 +160,5 @@ def apply_theme(app):
     for control in app.source_combo.winfo_children():
         if isinstance(control,ctk.CTkButton): control.configure(text_color='#08150d' if spotify and control.cget('text')=='Spotify' else TEXT)
     app.source_combo.configure(text_color_disabled='#777777')
-    app.singles_control.configure(fg_color=accent,hover_color=hover,border_color='#616161',checkmark_color='#08150d' if spotify else '#ffffff')
     app.progress.configure(progress_color=accent if app.busy or app.queue_tracker.total else '#242424')
-    app.album_panel.configure(border_color=border)
-    app.table_style.map('Albums.Treeview',background=[('selected',soft)],foreground=[('selected','#ffffff')])
+    app.download_panel.configure(border_color=border)

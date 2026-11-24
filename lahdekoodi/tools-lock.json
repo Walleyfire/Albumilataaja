@@ -1,13 +1,13 @@
 [
   {
-    "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2026.10.26/yt-dlp.exe",
-    "sha256": "f5389d3698ecde4ef06f4e6b1ce0294fe9ac1396228c8990b8d3416d6d177a7d",
+    "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2026.11.23/yt-dlp.exe",
+    "sha256": "622ed48023cac1daa52a3bf3a6ac38f03514de214b5f0fa069389fd0f6d17e5c",
     "filename": "yt-dlp.exe",
     "target": "yt-dlp.exe"
   },
   {
-    "url": "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/autobuild-2026-11-09-23-32/ffmpeg-N-128718-gb2b543c079-win64-gpl.zip",
-    "sha256": "9698c9ce1203df59f19d11c358ab269a8ab7806ec89f0af39b04100057f57e0d",
+    "url": "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/autobuild-2026-11-24-02-40/ffmpeg-N-129259-gf66ae9bb85-win64-gpl.zip",
+    "sha256": "c45f774db194956aff5a8b7e7353ad13048b044ffbcceaaa40fedb8f4b4b6aef",
     "filename": "ffmpeg.zip",
     "target": null
   },

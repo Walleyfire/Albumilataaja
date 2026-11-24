@@ -14,9 +14,23 @@ import threading
 from urllib.parse import urlparse, parse_qs
 from youtube_session import isolated_cookie_arguments
 from queue_progress import PARALLEL_PROGRESS
+from download_rows import row_event
 
 TRACK_WORKSPACE=ContextVar('spotify_track_workspace',default=None)
+TRACK_ROW=ContextVar('spotify_track_row',default=None)
 PROGRESS_LOCK=threading.RLock()
+
+
+def song_row(song):
+    return {'id':'spotify:'+str(song.song_id or song.url),'title':song.name or 'Kappale',
+            'artist':', '.join(song.artists or []),'album':song.album_name or '', 'source':'Spotify','error':''}
+
+
+def emit_row(record,**changes):
+    if record is None: return
+    with PROGRESS_LOCK:
+        record.update(changes)
+        row_event(lambda line:print(line,flush=True),record['id'],**{key:value for key,value in record.items() if key!='id'})
 
 
 def save_archive(archive,file):
@@ -64,19 +78,29 @@ def external_metadata(provider,url,download=False):
     # Inherit stderr so the UI sees actual YouTube errors, including auth
     # challenges, rather than spotDL's generic AudioProviderError alone.
     folder=getattr(provider,'_track_workspace',None) or get_temp_path()
+    record=getattr(provider,'_track_row',None)
+    emit_row(record,stage='downloading' if download else 'searching')
     args=audio_command(url,folder,provider.output_format,provider.cookie_file,download)
     # Each concurrent external process owns its own session copy.
     with isolated_cookie_arguments(args,os.environ.get('ALBUMILATAAJA_WORKSPACE')) as args:
-        result=subprocess.run(args,stdout=subprocess.PIPE,text=True,encoding='utf-8',errors='replace',
+        result=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding='utf-8',errors='replace',
                               creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0),
                               timeout=None if download else 180)
+    errors=getattr(result,'stderr','') or ''
+    if result.returncode:
+        lines=errors.splitlines()
+        message=next((line.removeprefix('ERROR:').strip() for line in reversed(lines) if line.startswith('ERROR:')),None)
+        emit_row(record,stage='error',error=message or 'YouTube-äänen lataus epäonnistui. Katso tarkempi loki.')
+    for line in errors.splitlines(): print(line,file=sys.stderr,flush=True)
     if result.returncode:
         raise AudioProviderError('YouTube-äänen lataus epäonnistui. Tarkka virhe näkyy yllä lokissa.')
     try:
         metadata=json.loads(result.stdout)
         if not isinstance(metadata,dict) or not metadata.get('id') or not metadata.get('ext'): raise ValueError()
     except (ValueError,TypeError):
+        emit_row(record,stage='error',error='Äänenlataaja palautti virheellisen metatietovastauksen.')
         raise AudioProviderError('Äänenlataaja palautti virheellisen metatietovastauksen.') from None
+    if download: emit_row(record,stage='converting')
     return metadata
 
 
@@ -90,10 +114,12 @@ def install_audio_bridge():
     original_init=AudioProvider.__init__
     original_temp=download_module.get_temp_path
     original_download=Downloader.async_search_and_download
+    original_multiple=Downloader.download_multiple_songs
     original_count=ProgressHandler.set_song_count
     def provider_init(self,*args,**kwargs):
         original_init(self,*args,**kwargs)
         self._track_workspace=TRACK_WORKSPACE.get()
+        self._track_row=TRACK_ROW.get()
     def track_temp(): return TRACK_WORKSPACE.get() or original_temp()
     def song_count(self,count):
         self._albumilataaja_progress={'completed':0,'failed':0,'running':0}
@@ -103,6 +129,7 @@ def install_audio_bridge():
         print(PARALLEL_PROGRESS+json.dumps({'total':handler.song_count,'completed':state['completed'],
               'failed':state['failed'],'partial':0,'running':state['running']}),flush=True)
     async def download(self,song):
+        record=song_row(song); emit_row(record,stage='searching')
         parallel=self.settings['threads']>1 and self.progress_handler.song_count>0
         handler=self.progress_handler
         if parallel:
@@ -117,6 +144,7 @@ def install_audio_bridge():
             # songs matched to the same video can never overwrite temp audio.
             with tempfile.TemporaryDirectory(prefix='spotify-track-',dir=os.environ.get('ALBUMILATAAJA_WORKSPACE')) as temporary:
                 token=TRACK_WORKSPACE.set(Path(temporary))
+                row_token=TRACK_ROW.set(record)
                 try:
                     result=await original_download(self,song)
                     failed=not result[1]
@@ -124,19 +152,27 @@ def install_audio_bridge():
                         with PROGRESS_LOCK:
                             self.url_archive.add(result[0].url)
                             self.url_archive.save(self.settings['archive'])
+                    if not failed:
+                        emit_row(record,stage='skipped' if record.get('stage')=='searching' else 'done',percent=100,filename=str(result[1]))
                     return result
-                finally: TRACK_WORKSPACE.reset(token)
+                finally: TRACK_WORKSPACE.reset(token); TRACK_ROW.reset(row_token)
         finally:
+            if failed: emit_row(record,stage='error',error=record.get('error') or 'Kappaleen lataus epäonnistui. Katso tarkempi loki.')
             if parallel:
                 with PROGRESS_LOCK:
                     state=handler._albumilataaja_progress
                     state['running']-=1; state['completed']+=1; state['failed']+=int(failed)
                     report(handler)
+    def multiple(self,songs):
+        for song in songs:
+            emit_row(song_row(song),stage='skipped' if self.settings['archive'] and song.url in self.url_archive else 'queued')
+        return original_multiple(self,songs)
     AudioProvider.__init__=provider_init
     AudioProvider.get_download_metadata=external_metadata
     AudioProvider._albumilataaja_bridge=True
     download_module.get_temp_path=track_temp
     Downloader.async_search_and_download=download
+    Downloader.download_multiple_songs=multiple
     ProgressHandler.set_song_count=song_count
     Archive.save=save_archive
 

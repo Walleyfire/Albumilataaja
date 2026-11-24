@@ -10,7 +10,10 @@ def fetch(destination):
     destination=Path(destination).resolve(); destination.mkdir(parents=True,exist_ok=True)
     cache=destination.parent.parent/'tool-downloads'; cache.mkdir(exist_ok=True)
     lock=json.loads(Path(__file__).with_name('tools-lock.json').read_text())
+    versions={'spotdl':'v4.6.0'}
     for item in lock:
+        key={'yt-dlp.exe':'yt-dlp','deno.zip':'deno','ffmpeg.zip':'ffmpeg'}[item['filename']]
+        versions[key]=item['url'].split('/download/',1)[1].split('/',1)[0]
         archive=cache/item['filename']
         if not archive.exists() or hashlib.sha256(archive.read_bytes()).hexdigest()!=item['sha256']:
             print('Downloading',item['filename'],flush=True)
@@ -27,6 +30,7 @@ def fetch(destination):
                     leaf=Path(name).name
                     if leaf in ['ffmpeg.exe','ffprobe.exe','deno.exe']:
                         (destination/leaf).write_bytes(z.read(name))
+    (destination/'tools-versions.json').write_text(json.dumps(versions),encoding='utf-8')
     print('Tool checksums verified.')
 
 if __name__=='__main__': fetch(sys.argv[1])

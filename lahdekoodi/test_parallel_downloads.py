@@ -8,6 +8,7 @@ from types import SimpleNamespace
 import app
 import youtube_parallel as parallel
 from queue_progress import QueueProgress,PROGRESS,PARALLEL_PROGRESS
+from download_rows import DownloadRows,parse_row
 
 
 class ParallelDownloadTests(unittest.TestCase):
@@ -66,6 +67,12 @@ class ParallelDownloadTests(unittest.TestCase):
             progress=[json.loads(line[len(PARALLEL_PROGRESS):]) for line in records if line.startswith(PARALLEL_PROGRESS)]
             self.assertEqual(progress[-1]['completed'],4); self.assertEqual(progress[-1]['failed'],1)
             self.assertEqual(progress[-1]['running'],0)
+            table=DownloadRows()
+            for line in records:
+                event=parse_row(line)
+                if event:table.update(event)
+            self.assertEqual([row['title'] for row in table.rows.values() if row['stage']=='error'],['B'*11])
+            self.assertTrue(all(row['stage']=='done' for row in table.rows.values() if row['title']!='B'*11))
 
     def test_auth_stops_other_processes_and_does_not_start_pending_files(self):
         with tempfile.TemporaryDirectory() as directory:

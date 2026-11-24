@@ -72,7 +72,7 @@ class SpotifyWorkerTests(unittest.TestCase):
             with patch('spotdl.utils.config.get_temp_path',return_value=Path(temporary)),patch.object(worker.subprocess,'run') as engine:
                 engine.return_value=SimpleNamespace(returncode=0,stdout=json.dumps(metadata))
                 self.assertEqual(worker.external_metadata(provider,'https://music.youtube.com/watch?v=iIMxq_BUyZs',True),metadata)
-                self.assertNotIn('stderr',engine.call_args.kwargs)  # actual auth errors reach GUI
+                self.assertEqual(engine.call_args.kwargs['stderr'],worker.subprocess.PIPE)  # worker reports row error before forwarding auth error
                 engine.return_value=SimpleNamespace(returncode=1,stdout='')
                 with self.assertRaises(AudioProviderError): worker.external_metadata(provider,'https://www.youtube.com/watch?v=iIMxq_BUyZs',True)
                 engine.return_value=SimpleNamespace(returncode=0,stdout='not JSON')
