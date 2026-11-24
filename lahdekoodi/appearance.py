@@ -34,6 +34,13 @@ class Progress(ctk.CTkProgressBar):
     def show_fraction(self,value):
         super().stop(); self.configure(mode='determinate'); self.set(value)
 
+class LinkInput(ctk.CTkTextbox):
+    def get(self,index1='1.0',index2='end-1c'):
+        return super().get(index1,index2)
+    def set(self,value):
+        self.delete('1.0','end')
+        self.insert('1.0',value)
+
 def dark_titlebar(window):
     if os.name!='nt': return
     try:
@@ -119,7 +126,7 @@ def build_interface(app,settings,preview=False):
                              padding=(10,7),borderwidth=0,relief='flat')
     app.table_style.layout('Albums.Treeview',[('Treeview.treearea',{'sticky':'nswe'})])
     app.table_style.map('Albums.Treeview.Heading',background=[('active','#282828')])
-    app.tree=ttk.Treeview(tree_frame,columns=('title','year','kind'),show='headings',selectmode='extended',height=4,style='Albums.Treeview')
+    app.tree=ttk.Treeview(tree_frame,columns=('title','year','kind'),show='headings',selectmode='extended',height=2,style='Albums.Treeview')
     for key,text,width,stretch in [('title','ALBUMI / JULKAISU',640,True),('year','VUOSI',90,False),('kind','TYYPPI',145,False)]:
         app.tree.heading(key,text=text,anchor='w'); app.tree.column(key,width=width,minwidth=width if not stretch else 220,stretch=stretch,anchor='w')
     app.tree.pack(fill='both',expand=True)
@@ -128,8 +135,10 @@ def build_interface(app,settings,preview=False):
     app.empty_label.place(relx=.5,rely=.55,anchor='center')
 
     link=frame(outer); link.pack(fill='x')
-    entry(link,app.direct,'Liitä albumin, soittolistan tai kappaleen linkki').pack(side='left',fill='x',expand=True)
-    app.link_btn=button(link,'Lataa linkistä',app.download_link,width=150,height=40); app.link_btn.pack(side='left',padx=(10,0))
+    app.direct=LinkInput(link,height=76,corner_radius=11,fg_color=FIELD,border_color='#303030',border_width=1,
+                        text_color=TEXT,font=('Segoe UI',13),wrap='none',activate_scrollbars=False)
+    app.direct.pack(side='left',fill='x',expand=True)
+    app.link_btn=button(link,'Lataa linkit',app.download_link,width=150,height=40); app.link_btn.pack(side='left',padx=(10,0))
     app.link_note=label(outer,font=('Segoe UI',10),height=18); app.link_note.pack(anchor='w',pady=(2,5))
 
     path=frame(outer); path.pack(fill='x',pady=(0,9))

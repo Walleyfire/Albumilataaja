@@ -19,7 +19,7 @@ import webbrowser
 import requests
 from ytmusicapi import YTMusic
 
-VERSION = '1.1.3'
+VERSION = '1.1.4'
 REPOSITORY = 'Walleyfire/Albumilataaja'
 BASE = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
 TOOLS = BASE / 'tools'
@@ -49,9 +49,20 @@ def newest_first(albums):
 
 def youtube_url(value):
     p = urlparse(value)
-    if p.scheme != 'https' or p.hostname not in ('youtube.com','www.youtube.com','music.youtube.com','youtu.be'):
+    if p.scheme != 'https' or p.hostname not in ('youtube.com','www.youtube.com','music.youtube.com','youtu.be') or any(c.isspace() for c in value):
         raise ValueError('Liitä https-alkuinen YouTube-linkki.')
     return value
+
+def download_links(value,validator):
+    links=[]
+    for number,line in enumerate(value.splitlines(),1):
+        line=line.strip()
+        if not line: continue
+        try: url=validator(line)
+        except ValueError as error: raise ValueError(f'Rivi {number}: {error}') from None
+        if url not in links: links.append(url)
+    if not links: raise ValueError('Liitä vähintään yksi latauslinkki, yksi linkki riville.')
+    return links
 
 def version_tuple(value):
     if not re.fullmatch(r'v?\d+\.\d+\.\d+', value):
@@ -102,7 +113,7 @@ class App(ctk.CTk):
             settings=json.loads(settings_path.read_text(encoding='utf-8'))
         except (OSError,ValueError): settings={}
         self.destination=tk.StringVar(value=settings.get('destination',str(Path.home()/'Music'/'Albumilataaja')))
-        self.query=tk.StringVar(); self.artist_choice=tk.StringVar(); self.direct=tk.StringVar()
+        self.query=tk.StringVar(); self.artist_choice=tk.StringVar()
         self.format=tk.StringVar(value=settings.get('format','flac')); self.singles=tk.BooleanVar(value=True)
         self.source=tk.StringVar(value=settings.get('source','YouTube'))
         self.layout=tk.StringVar(value=settings.get('layout','Albumi, Vuosi'))
@@ -121,7 +132,7 @@ class App(ctk.CTk):
         if self.console_visible:
             self.log_frame.pack(fill='x'); self.console_button.configure(text='Piilota console'); self.minsize(1040,900)
         else:
-            self.log_frame.pack_forget(); self.console_button.configure(text='Näytä console'); self.minsize(1040,740)
+            self.log_frame.pack_forget(); self.console_button.configure(text='Näytä console'); self.minsize(1040,800)
     def log_line(self,line):
         self.log.configure(state='normal'); self.log.insert('end',line+'\n')
         if int(self.log.index('end-1c').split('.')[0])>500: self.log.delete('1.0','100.0')
@@ -137,7 +148,7 @@ class App(ctk.CTk):
     def source_changed(self):
         spotify=self.source.get()=='Spotify (spotDL)'
         self.source_note.configure(text='Spotify-tiedot, ääni YouTubesta.' if spotify else 'Artistihaku ja albumit YouTube Musicista.')
-        self.link_note.configure(text='Liitä Spotify-artistin linkki ladataksesi tuotannon albumeittain. Myös albumi, soittolista ja kappale käyvät.' if spotify else 'Liitä YouTube-videon tai albumisoittolistan https-linkki.')
+        self.link_note.configure(text='Yksi Spotify-linkki riville: artisti, albumi, soittolista tai kappale. Linkit ladataan samassa jonossa.' if spotify else 'Liitä YouTube-linkit yksi linkki riville. Videot ja albumisoittolistat ladataan samassa jonossa.')
         self.search_btn.configure(text='Hae artisti')
         self.album_btn.configure(state='normal')
         self.download_btn.configure(state='normal' if self.album_source==self.source.get() and self.albums else 'disabled')
@@ -265,15 +276,16 @@ class App(ctk.CTk):
         if self.source.get()=='Spotify (spotDL)': self.download_spotify([a['spotify_url'] for a in items])
         else: self.start_download(items,self.artist)
     def download_link(self):
+        if self.busy: return
         if self.source.get()=='Spotify (spotDL)':
             self.download_spotify(); return
-        try: url=youtube_url(self.direct.get().strip())
-        except ValueError as e: messagebox.showerror('Linkki',str(e)); return
-        self.start_download([{'url':url}],None)
+        try: urls=download_links(self.direct.get(),youtube_url)
+        except ValueError as e: messagebox.showerror('Linkit',str(e)); return
+        self.start_download([{'url':url} for url in urls],None)
     def download_spotify(self,urls=None):
         if self.busy: return
         try:
-            urls=[spotify_url(u) for u in urls] if urls else [spotify_url(self.direct.get().strip())]
+            urls=[spotify_url(u) for u in urls] if urls is not None else download_links(self.direct.get(),spotify_url)
             root=Path(self.destination.get()).expanduser().resolve()
         except ValueError as e: messagebox.showerror('Linkki',str(e)); return
         fmt=self.format.get(); layout=self.layout.get(); include_singles=self.singles.get(); self.save_settings()

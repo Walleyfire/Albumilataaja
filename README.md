@@ -28,7 +28,9 @@ Asennus tapahtuu omaan käyttäjäprofiiliin ilman järjestelmänvalvojan oikeuk
 7. Valitse **Tallennuskansio**, **Muoto** ja **Kansiomuoto**.
 8. Paina **Lataa valitut julkaisut**. Edistyminen ja virheet näkyvät ikkunan alareunassa.
 
-**Suora linkki:** kopioi YouTubesta albumisoittolistan tai yksittäisen videon https-linkki, liitä se albumilistan alla olevaan linkkikenttään ja paina **Lataa linkistä**.
+**Suorat linkit:** liitä albumilistan alla olevaan moniriviseen kenttään yksi tai useampi YouTube-videon tai albumisoittolistan https-linkki, **yksi linkki riville**, ja paina **Lataa linkit**. Kaikki linkit käsitellään samassa jonossa syöttämässäsi järjestyksessä. Tyhjät rivit ja täsmälleen samat toistuvat linkit ohitetaan. Jos jokin rivi on virheellinen, korjaa ilmoitettu rivi ennen latauksen aloitusta.
+
+Linkit ladataan peräkkäin; jokaisen albumin tai videon musiikki tallennetaan omiin artisti- ja albumikansioihinsa. Latauspalkki ja aika-arvio koskevat koko linkkijonoa. Myös Spotify-tilassa voit liittää useita sen palvelun linkkejä yksi riville.
 
 ## Spotify ja spotDL
 
@@ -40,7 +42,7 @@ Valitse **Lähde → Spotify**.
 2. Valitse sen valikosta **Jaa → Kopioi linkki**.
 3. Liitä `https://open.spotify.com/...`-linkki sovelluksen linkkikenttään.
 4. Valitse tallennuskansio, tiedostomuoto ja kansiomuoto.
-5. Paina **Lataa linkistä**.
+5. Paina **Lataa linkit**.
 
 Artistin linkki pyytää spotDL:ää käsittelemään löytämänsä tuotannon. Albumin linkki käsittelee yhden albumin. Tämä versio ei sisällä Spotify-kirjautumista eikä yksityisten soittolistojen tai käyttäjän tallennettujen kappaleiden lataamista.
 
@@ -163,4 +165,4 @@ Lähdekoodi on `lahdekoodi/`-kansiossa. Rakentaminen vaatii Windowsin, Python 3.
 
 Skripti asentaa Python-riippuvuudet, ajaa testit, lataa lukitut taustatyökalut ja tarkistaa niiden SHA-256:t sekä rakentaa `dist/`-kansioon asentajan, portable-paketin ja tarkistussummat. Versiot ja latausosoitteet ovat tiedostossa `lahdekoodi/tools-lock.json`. Kolmansien osapuolten lisenssit ja lähteet on kuvattu tiedostossa [THIRD_PARTY.md](THIRD_PARTY.md).
 
-Uutta versiota varten päivitä `VERSION` tiedostossa `lahdekoodi/app.py` ja julkaise vastaava Git-tagi, esimerkiksi seuraavana korjauspäivityksenä `v1.1.4`. GitHub Actions testaa ja paketoi sovelluksen sekä julkaisee asentajan, portable-paketin ja tarkistussummat. Pysyvä AppId mahdollistaa päivityksen nykyisen asennuksen paikalle. Sovelluksen päivitystarkistus käyttää uusinta vakaata GitHub-julkaisua.
+Uutta versiota varten päivitä `VERSION` tiedostossa `lahdekoodi/app.py` ja julkaise vastaava Git-tagi, esimerkiksi seuraavana korjauspäivityksenä `v1.1.5`. GitHub Actions testaa ja paketoi sovelluksen sekä julkaisee asentajan, portable-paketin ja tarkistussummat. Pysyvä AppId mahdollistaa päivityksen nykyisen asennuksen paikalle. Sovelluksen päivitystarkistus käyttää uusinta vakaata GitHub-julkaisua.

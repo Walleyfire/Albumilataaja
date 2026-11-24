@@ -5,9 +5,30 @@ import app
 import hashlib
 import threading
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 class AppTests(unittest.TestCase):
+    def test_multiple_links_keep_order_skip_blanks_and_exact_duplicates(self):
+        first='https://youtu.be/first'
+        second='https://www.youtube.com/playlist?list=second'
+        value=f'  {first}  \r\n\n{second}\r\n{first}\n'
+        self.assertEqual(app.download_links(value,app.youtube_url),[first,second])
+        target=SimpleNamespace(busy=False,source=SimpleNamespace(get=lambda:'YouTube'),direct=SimpleNamespace(get=lambda:value),start_download=Mock())
+        app.App.download_link(target)
+        target.start_download.assert_called_once_with([{'url':first},{'url':second}],None)
+    def test_invalid_link_rejects_whole_batch_before_downloading(self):
+        target=SimpleNamespace(busy=False,source=SimpleNamespace(get=lambda:'YouTube'),direct=SimpleNamespace(get=lambda:'https://youtu.be/first\n\nhttps://evil.test/video'),start_download=Mock())
+        with patch.object(app.messagebox,'showerror') as error:
+            app.App.download_link(target)
+            self.assertIn('Rivi 3',error.call_args.args[1])
+        target.start_download.assert_not_called()
+        for value in ['\n  \n','https://youtu.be/one https://youtu.be/two']:
+            with self.assertRaises(ValueError): app.download_links(value,app.youtube_url)
+    def test_multi_link_validation_uses_selected_service(self):
+        links=['https://open.spotify.com/track/123','https://open.spotify.com/album/456']
+        self.assertEqual(app.download_links('\n'.join(links),app.spotify_url),links)
+        with self.assertRaises(ValueError): app.download_links(links[0],app.youtube_url)
+        with self.assertRaises(ValueError): app.download_links('https://youtu.be/123',app.spotify_url)
     def test_spotdl_error_is_failure_even_when_engine_exits_zero(self):
         process=SimpleNamespace(stdout=iter(['AudioProviderError: Äänenlataaja palautti virheellisen vastauksen.\n']),wait=lambda:0)
         target=SimpleNamespace(cancel=threading.Event(),emit=lambda *args:None)
