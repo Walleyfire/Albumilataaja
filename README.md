@@ -52,6 +52,8 @@ Latauspalkki seuraa **koko jonoa**. Sen alla näkyvät käsiteltyjen tiedostojen
 
 Kirjautumis- tai varmistuspyyntö pysäyttää koko jonon. Jos palvelu alkaa rajoittaa latauksia, pienennä samanaikaisten latausten määrää.
 
+Pysähtyneen jonon voi jatkaa samassa sovellusistunnossa: valitse uusi **YouTube-evästeet**-tiedosto ja paina **Jatka jonoa**. Jatkaminen palauttaa alkuperäiset linkit, lähteen, tallennuskansion, tiedostomuodon, kansiomuodon ja rinnakkaisten latausten määrän. Jo valmistuneet kappaleet ohitetaan lataushistorian avulla; kesken jääneet kappaleet aloitetaan uudelleen. Tämä toimii sekä YouTube- että Spotify-lähteellä. Painike tulee näkyviin kirjautumispyynnön pysäytettyä jonon. Uuden latausjonon aloittaminen korvaa aiemman jatkettavan jonon. Jatkojonoa ei tallenneta levylle eikä palauteta sovelluksen sulkemisen jälkeen.
+
 ## Kansiomuodot
 
 Kaikki vaihtoehdot toimivat molemmilla latauslähteillä:
@@ -121,8 +123,8 @@ Päivitys sisältää myös testatut taustatyökalut. Päivityksen jälkeinen k�
 
 1. Avaa YouTube itse selaimessa ja tee sen pyytämä varmistus itse.
 2. Vie tarvittaessa YouTuben evästeet Netscape-muotoiseen `cookies.txt`-tiedostoon. Katso yt-dlp:n [evästeohje](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp) ja [YouTube-kohtainen vientiohje](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies).
-3. Paina **YouTube-evästeet** ja valitse tiedosto koneeltasi. Se koskee sekä YouTube-latauksia että SpotDL:n käyttämää YouTube-ääntä.
-4. Käynnistä latausjono uudelleen. Valmiit kappaleet säilyvät.
+3. Paina **YouTube-evästeet** ja valitse uusi tiedosto koneeltasi. Se koskee sekä YouTube-latauksia että SpotDL:n käyttämää YouTube-ääntä.
+4. Paina **Jatka jonoa**, jos kirjautumispyyntö pysäytti jonon tässä sovellusistunnossa. Valmiit kappaleet ohitetaan. Muussa tapauksessa käynnistä lataus linkeistä uudelleen.
 
 Sovellus ei lue selaimen profiilia tai vie evästeitä automaattisesti. Asetuksiin tallennetaan vain valitun tiedoston polku. Jokainen latausprosessi käyttää omaa väliaikaista kopiota: **alkuperäistä cookies.txt-tiedostoa ei muokata**. Kopiot siivotaan toiminnon päätyttyä myös keskeytyksessä. **Poista valinta** lopettaa tiedoston käytön poistamatta alkuperäistä tiedostoa.
 
@@ -161,4 +163,4 @@ Lähdekoodi on `lahdekoodi/`-kansiossa. Rakentaminen vaatii Windowsin, Python 3.
 
 Skripti asentaa Python-riippuvuudet, ajaa testit, lataa lukitut taustatyökalut ja tarkistaa niiden SHA-256:t. Se rakentaa taustatyökalut, sovelluksen, asentajan, portable-paketin ja tarkistussummat `dist/`-kansioon. Rakennuksessa käytetyt työkalut ovat tiedostossa `lahdekoodi/tools-lock.json`. Kolmansien osapuolten lisenssit ja lähteet on kuvattu tiedostossa [THIRD_PARTY.md](THIRD_PARTY.md).
 
-Uutta versiota varten päivitä `VERSION` tiedostossa `lahdekoodi/app.py` ja julkaise vastaava Git-tagi, esimerkiksi seuraavana korjauspäivityksenä `v1.4.1`. GitHub Actions testaa ja paketoi sovelluksen sekä julkaisee asentajan, portable-paketin ja tarkistussummat. Pysyvä AppId mahdollistaa päivityksen nykyisen asennuksen paikalle.
+Uutta versiota varten päivitä `VERSION` tiedostossa `lahdekoodi/app.py` ja julkaise vastaava Git-tagi, esimerkiksi seuraavana korjauspäivityksenä `v1.4.2`. GitHub Actions testaa ja paketoi sovelluksen sekä julkaisee asentajan, portable-paketin ja tarkistussummat. Pysyvä AppId mahdollistaa päivityksen nykyisen asennuksen paikalle.

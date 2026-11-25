@@ -1,4 +1,5 @@
 import hashlib
+from copy import deepcopy
 import json
 import os
 from pathlib import Path
@@ -21,7 +22,7 @@ from urllib.parse import urlparse
 import webbrowser
 import requests
 
-VERSION = '1.4.0'
+VERSION = '1.4.1'
 FLAT_LAYOUT = 'Suoraan tallennuskansioon'
 REPOSITORY = 'Walleyfire/Albumilataaja'
 BASE = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
@@ -135,6 +136,7 @@ class App(ctk.CTk):
         self.status=tk.StringVar(value='Liitä valitun palvelun linkit, yksi linkki riville.')
         self.cookie_file=tk.StringVar(value=settings.get('youtube_cookie_file',''))
         self.youtube_auth_required=False
+        self.download_request=None; self.paused_download=None; self.resume_cookie_selected=False
         self.queue_summary=tk.StringVar(value=''); self.queue_tracker=QueueProgress()
         self.download_rows=DownloadRows(); self.active_download=False; self.download_error=''
         build_interface(self,settings,preview=PREVIEW)
@@ -145,6 +147,38 @@ class App(ctk.CTk):
     def emit(self,kind,data): self.events.put((kind,data))
     def reset_download_rows(self):
         self.download_rows.clear();self.active_download=True;self.download_error='';self.download_table.render()
+    def remember_download(self,request):
+        self.download_request=deepcopy(request)
+        self.paused_download=None;self.resume_cookie_selected=False;self.youtube_auth_required=False
+        self.refresh_resume_button()
+    def refresh_resume_button(self):
+        ready=self.paused_download is not None and not self.busy
+        if ready:self.resume_btn.pack(side='right',padx=(0,8))
+        else:self.resume_btn.pack_forget()
+        self.resume_btn.configure(state='normal' if ready else 'disabled')
+    def finish_download(self):
+        stopped=self.cancel.is_set() or self.youtube_auth_required
+        error='Jono pysäytetty: YouTube pyytää varmistusta.' if self.youtube_auth_required else self.download_error
+        self.download_rows.finish(cancelled=stopped,error=error);self.active_download=False
+        if self.youtube_auth_required and self.download_request:
+            self.paused_download=deepcopy(self.download_request);self.resume_cookie_selected=False
+            self.status.set('Jono odottaa uusia evästeitä. Valitse YouTube-evästeet ja paina Jatka jonoa.')
+        else:self.paused_download=None
+    def resume_download(self):
+        if self.busy or self.paused_download is None:return
+        if not self.resume_cookie_selected:
+            self.choose_youtube_cookies()
+            if not self.resume_cookie_selected:return
+        cookies=self.selected_cookies()
+        if not cookies:return
+        request=deepcopy(self.paused_download)
+        self.source.set(request['source']);self.source_display.set('Spotify' if request['source']=='Spotify (spotDL)' else 'YouTube')
+        self.destination.set(request['root']);self.format.set(request['format']);self.layout.set(request['layout']);self.parallel.set(str(request['workers']))
+        self.direct.set('\n'.join(request['urls'] if request['source']=='Spotify (spotDL)' else [item['url'] for item in request['items']]))
+        self.source_changed()
+        self.log_line('Jatketaan alkuperäistä jonoa uusilla evästeillä. Valmiit kappaleet ohitetaan lataushistorian avulla.')
+        if request['source']=='Spotify (spotDL)':self.download_spotify(request['urls'],resume=request)
+        else:self.start_download(request['items'],request['artist'],resume=request)
     def open_tools(self):
         dialog=getattr(self,'tools_dialog',None)
         if dialog is not None and dialog.winfo_exists():dialog.lift();return
@@ -189,6 +223,7 @@ class App(ctk.CTk):
         self.progress.start(12) if value else self.progress.stop()
         self.source_combo.configure(state='disabled' if value else 'readonly')
         self.parallel_combo.configure(state='disabled' if value else 'readonly')
+        self.refresh_resume_button()
         apply_theme(self)
         if not value: self.source_changed()
     def source_changed(self):
@@ -232,9 +267,7 @@ class App(ctk.CTk):
                     self.status.set('Toiminto epäonnistui.'); self.log_line(data); messagebox.showerror('Albumilataaja',data)
                 elif kind=='done':
                     if self.active_download:
-                        stopped=self.cancel.is_set() or self.youtube_auth_required
-                        error='Jono pysäytetty: YouTube pyytää varmistusta.' if self.youtube_auth_required else self.download_error
-                        self.download_rows.finish(cancelled=stopped,error=error);rows_changed=True;self.active_download=False
+                        self.finish_download();rows_changed=True
                     self.set_busy(False)
                 elif kind=='update': self.offer_update(data)
                 elif kind=='current': messagebox.showinfo('Päivitykset','Sovellus on ajan tasalla.')
@@ -279,10 +312,14 @@ class App(ctk.CTk):
         try: path=validate_cookie_file(path)
         except ValueError as error: messagebox.showerror('YouTube-evästeet',str(error)); return
         self.cookie_file.set(path); self.save_settings(); self.refresh_cookie_label()
-        self.status.set('Itse valittu YouTube-istunto otetaan käyttöön seuraavassa latauksessa.')
+        if self.paused_download is not None:
+            self.resume_cookie_selected=True
+            self.status.set('Uusi evästetiedosto valittu. Paina Jatka jonoa jatkaaksesi kesken jääneitä latauksia.')
+        else:self.status.set('Itse valittu YouTube-istunto otetaan käyttöön seuraavassa latauksessa.')
     def clear_youtube_cookies(self):
         if self.busy: return
         self.cookie_file.set(''); self.save_settings(); self.refresh_cookie_label()
+        self.resume_cookie_selected=False
         self.status.set('YouTube-istunnon valinta poistettiin. Alkuperäistä tiedostoa ei poistettu.')
     def refresh_cookie_label(self):
         self.cookie_label.configure(text='YouTube-istunto: valittu tiedosto' if self.cookie_file.get() else 'YouTube-istunto: ei käytössä')
@@ -296,15 +333,17 @@ class App(ctk.CTk):
         try: urls=download_links(self.direct.get(),youtube_url)
         except ValueError as e: messagebox.showerror('Linkit',str(e)); return
         self.start_download([{'url':url} for url in urls],None)
-    def download_spotify(self,urls=None):
+    def download_spotify(self,urls=None,resume=None):
         if self.busy: return
         try:
             urls=[spotify_url(u) for u in urls] if urls is not None else download_links(self.direct.get(),spotify_url)
-            root=Path(self.destination.get()).expanduser().resolve()
+            root=Path(resume['root']) if resume else Path(self.destination.get()).expanduser().resolve()
         except ValueError as e: messagebox.showerror('Linkki',str(e)); return
         fmt=self.format.get(); layout=self.layout.get(); include_singles=True; workers=download_workers(self.parallel.get()); self.save_settings()
+        if resume:fmt=resume['format'];layout=resume['layout'];workers=resume['workers']
         cookie_file=self.selected_cookies()
         if cookie_file is None: return
+        self.remember_download({'source':'Spotify (spotDL)','urls':urls,'root':str(root),'format':fmt,'layout':layout,'workers':workers})
         self.reset_download_rows()
         def work():
             root.mkdir(parents=True,exist_ok=True)
@@ -349,14 +388,16 @@ class App(ctk.CTk):
             elif errors: self.emit('status','spotDL ilmoitti virheistä. Katso loki ja yritä tarvittaessa uudelleen.')
             else: self.emit('status','spotDL-lataus valmis. Tarkista tallennuskansio.')
         self.run_job(work)
-    def start_download(self,items,artist):
+    def start_download(self,items,artist,resume=None):
         if self.busy: return
         names=['yt-dlp.exe','ffmpeg.exe','ffprobe.exe','deno.exe']+(['youtube-parallel.exe'] if getattr(sys,'frozen',False) else [])
         missing=[name for name in names if not (TOOLS/name).exists()]
         if missing: messagebox.showerror('Puuttuvia tiedostoja','Asenna sovellus uudelleen: '+', '.join(missing)); return
         root=Path(self.destination.get()).expanduser().resolve(); fmt=self.format.get(); layout=self.layout.get(); workers=download_workers(self.parallel.get()); self.save_settings()
+        if resume:root=Path(resume['root']);fmt=resume['format'];layout=resume['layout'];workers=resume['workers']
         cookie_file=self.selected_cookies()
         if cookie_file is None: return
+        self.remember_download({'source':'YouTube','items':items,'artist':artist,'root':str(root),'format':fmt,'layout':layout,'workers':workers})
         self.reset_download_rows()
         def work():
             failures=0; jobs=[]

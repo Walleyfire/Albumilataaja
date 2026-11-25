@@ -125,6 +125,7 @@ def build_interface(app,settings,preview=False):
     combo(actions,app.layout,['Albumi, Vuosi','Vuosi - Albumi','Suoraan tallennuskansioon'],width=210).pack(side='left')
     app.stop_btn=button(actions,'Keskeytä',app.stop,width=104,height=40,state='disabled')
     app.stop_btn.pack(side='right')
+    app.resume_btn=button(actions,'Jatka jonoa',app.resume_download,True,width=125,height=40,state='disabled')
     label(outer,'YouTuben äänen tallentaminen FLACiksi ei paranna alkuperäistä äänenlaatua.',font=('Segoe UI',10),text_color='#717171',height=18).pack(anchor='w',pady=(5,0))
     app.download_panel=ctk.CTkFrame(outer,fg_color=PANEL,corner_radius=16,border_width=1,border_color='#242424')
     app.download_panel.pack(fill='both',expand=True,pady=(12,6))

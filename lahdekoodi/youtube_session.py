@@ -38,5 +38,5 @@ def requires_youtube_auth(line):
 
 AUTH_HELP=('YouTube pyytää kirjautumista tai manuaalista varmistusta. Latausjono pysäytettiin.\n\n'
            'Avaa YouTube itse selaimessa ja tee sen pyytämä varmistus. Jos lataus tarvitsee kirjautumisistunnon, '
-           'valitse sovelluksen YouTube-evästeet-painikkeella itse viemäsi cookies.txt-tiedosto ja aloita lataus uudelleen.\n\n'
+           'valitse sovelluksen YouTube-evästeet-painikkeella itse viemäsi uusi cookies.txt-tiedosto ja paina Jatka jonoa.\n\n'
            'Jo valmistuneet kappaleet säilyvät. Evästeet eivät takaa latauksen onnistumista. Älä lähetä evästetiedostoa muille.')

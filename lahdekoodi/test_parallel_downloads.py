@@ -12,6 +12,33 @@ from download_rows import DownloadRows,parse_row
 
 
 class ParallelDownloadTests(unittest.TestCase):
+    def test_resume_with_refreshed_cookies_skips_finished_and_retries_pending_tracks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);tasks=self.tasks(root,3);source=root/'cookies.txt'
+            old='# Netscape HTTP Cookie File\n# old synthetic session\n'
+            fresh='# Netscape HTTP Cookie File\n# refreshed synthetic session\n'
+            source.write_text(old);started=[];records=[]
+            class Process:
+                def __init__(self,args,**kwargs):
+                    self.args=args;self.id=args[-1].split('=')[-1];self.pid=123
+                    self.cookies=Path(args[args.index('--cookies')+1]).read_text()
+                    started.append((self.id,self.cookies))
+                    self.blocked=self.id=='B'*11 and self.cookies==old
+                    self.stdout=iter(["ERROR: Sign in to confirm you're not a bot"] if self.blocked else [])
+                def poll(self):return 1 if self.blocked else 0
+                def wait(self):
+                    if not self.blocked:Path(self.args[self.args.index('--download-archive')+1]).write_text('youtube '+self.id+'\n')
+                    return int(self.blocked)
+            with patch.object(parallel.subprocess,'Popen',side_effect=Process),patch.object(parallel,'finalize_download',return_value='') as finalize:
+                self.assertEqual(parallel.Batch(tasks,1,str(source),root,records.append).run(),2)
+                self.assertEqual(source.read_text(),old)
+                self.assertEqual(Path(tasks[0]['archive']).read_text(),'youtube '+'A'*11+'\n')
+                source.write_text(fresh)
+                self.assertEqual(parallel.Batch(tasks,1,str(source),root,records.append).run(),0)
+                self.assertEqual(finalize.call_count,3)
+            self.assertEqual(started,[('A'*11,old),('B'*11,old),('B'*11,fresh),('C'*11,fresh)])
+            self.assertEqual(source.read_text(),fresh)
+            self.assertEqual(set(Path(tasks[0]['archive']).read_text().splitlines()),{'youtube '+letter*11 for letter in 'ABC'})
     def test_failed_metadata_cleanup_never_records_download_as_finished(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);tasks=self.tasks(root,1);archive=Path(tasks[0]['archive'])
