@@ -18,6 +18,14 @@ NO_WINDOW=getattr(subprocess,'CREATE_NO_WINDOW',0)
 OUTPUT_LOCK=threading.Lock()
 
 
+def save_checkpoint(path,tasks):
+    if path is None:return
+    path=Path(path);path.parent.mkdir(parents=True,exist_ok=True)
+    temporary=path.with_suffix('.tmp')
+    temporary.write_text(json.dumps({'tasks':tasks},ensure_ascii=False),encoding='utf-8')
+    temporary.replace(path)
+
+
 def output(line):
     with OUTPUT_LOCK: print(line,flush=True)
 
@@ -35,12 +43,13 @@ def finalize_download(temporary,task,filename):
 
 
 class Batch:
-    def __init__(self,tasks,workers,cookies,workspace,emit=output):
+    def __init__(self,tasks,workers,cookies,workspace,emit=output,checkpoint=None):
         self.tasks=tasks; self.workers=max(1,min(20,int(workers)))
         self.cookies=cookies; self.workspace=Path(workspace); self.emit=emit
         self.lock=threading.RLock(); self.archives_lock=threading.Lock()
         self.stopped=threading.Event(); self.authentication=False
-        self.processes=set(); self.partial={}; self.completed=set(); self.failed=set()
+        self.processes=set(); self.partial={}; self.completed={i for i,task in enumerate(tasks) if task.get('finished')}; self.failed=set()
+        self.checkpoint=checkpoint
 
     def report(self):
         # Called under the lock so progress records cannot arrive out of order.
@@ -138,7 +147,10 @@ class Batch:
         finally:
             with self.lock:
                 self.partial.pop(number,None)
-                stage='error' if failed or last_error else ('cancelled' if self.stopped.is_set() else ('skipped' if skipped else 'done'))
+                if published or skipped:
+                    task['finished']=True;self.completed.add(number)
+                    save_checkpoint(self.checkpoint,self.tasks)
+                stage='skipped' if skipped else ('done' if published else ('error' if failed or last_error else ('cancelled' if self.stopped.is_set() else 'done')))
                 self.row(number,task,stage=stage,error=last_error or ('Lataus epäonnistui. Katso tarkempi loki.' if failed else ''),filename=filename)
                 if not self.stopped.is_set():
                     self.completed.add(number)
@@ -146,11 +158,11 @@ class Batch:
                 self.report()
 
     def run(self):
-        for number,task in enumerate(self.tasks): self.row(number,task,stage='queued')
+        for number,task in enumerate(self.tasks): self.row(number,task,stage='done' if task.get('finished') else 'queued')
         with self.lock: self.report()
         with ThreadPoolExecutor(max_workers=self.workers) as pool:
             # Workers check the stop event before creating another process.
-            list(pool.map(lambda item:self.download(*item),enumerate(self.tasks)))
+            list(pool.map(lambda item:self.download(*item),((i,task) for i,task in enumerate(self.tasks) if not task.get('finished'))))
         return 2 if self.authentication else int(bool(self.failed))
 
 
@@ -194,15 +206,17 @@ def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('manifest',nargs='?',type=Path); parser.add_argument('--workers',type=int,choices=range(1,21),default=2)
     parser.add_argument('--cookies',default=''); parser.add_argument('--self-test',action='store_true')
+    parser.add_argument('--checkpoint',type=Path)
     args=parser.parse_args()
     if args.self_test: print('Parallel YouTube worker dependencies OK'); return 0
     if args.manifest is None: parser.error('manifest required')
     jobs=json.loads(args.manifest.read_text(encoding='utf-8'))
     with tempfile.TemporaryDirectory(prefix='youtube-',dir=os.environ.get('ALBUMILATAAJA_WORKSPACE')) as workspace:
-        tasks=prepare_tasks(jobs,args.cookies,workspace)
+        tasks=json.loads(args.checkpoint.read_text(encoding='utf-8'))['tasks'] if args.checkpoint and args.checkpoint.exists() else prepare_tasks(jobs,args.cookies,workspace)
         if tasks is None: return 2
         if not tasks: output('ERROR: Latausjono on tyhjä.'); return 1
-        return Batch(tasks,args.workers,args.cookies,workspace).run()
+        save_checkpoint(args.checkpoint,tasks)
+        return Batch(tasks,args.workers,args.cookies,workspace,emit=output,checkpoint=args.checkpoint).run()
 
 
 if __name__=='__main__': raise SystemExit(main())

@@ -9,11 +9,12 @@ import subprocess
 import sys
 import tempfile
 import threading
+import uuid
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import customtkinter as ctk
 from appearance import build_interface, apply_theme, dark_titlebar
-from queue_progress import QueueProgress, PROGRESS, TRACK_DONE
+from queue_progress import QueueProgress, PROGRESS, TRACK_DONE, PARALLEL_PROGRESS
 from download_rows import DownloadRows,parse_row
 from tool_updates import check_updates as check_tool_releases,install_updates as install_tool_releases,newer
 from tool_dialog import ToolDialog
@@ -22,7 +23,7 @@ from urllib.parse import urlparse
 import webbrowser
 import requests
 
-VERSION = '1.4.1'
+VERSION = '1.4.2'
 FLAT_LAYOUT = 'Suoraan tallennuskansioon'
 REPOSITORY = 'Walleyfire/Albumilataaja'
 BASE = Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
@@ -145,9 +146,14 @@ class App(ctk.CTk):
         if not PREVIEW: self.after(1800,lambda:self.check_updates(False))
 
     def emit(self,kind,data): self.events.put((kind,data))
-    def reset_download_rows(self):
-        self.download_rows.clear();self.active_download=True;self.download_error='';self.download_table.render()
+    def reset_download_rows(self,resuming=False):
+        if resuming:self.download_rows.resume()
+        else:self.download_rows.clear()
+        self.active_download=True;self.download_error='';self.download_table.render()
     def remember_download(self,request):
+        previous=getattr(self,'download_request',None)
+        if previous and previous.get('checkpoint') and previous.get('checkpoint')!=request.get('checkpoint'):
+            Path(previous['checkpoint']).unlink(missing_ok=True)
         self.download_request=deepcopy(request)
         self.paused_download=None;self.resume_cookie_selected=False;self.youtube_auth_required=False
         self.refresh_resume_button()
@@ -163,7 +169,9 @@ class App(ctk.CTk):
         if self.youtube_auth_required and self.download_request:
             self.paused_download=deepcopy(self.download_request);self.resume_cookie_selected=False
             self.status.set('Jono odottaa uusia evästeitä. Valitse YouTube-evästeet ja paina Jatka jonoa.')
-        else:self.paused_download=None
+        else:
+            self.paused_download=None
+            if self.download_request and self.download_request.get('checkpoint'):Path(self.download_request['checkpoint']).unlink(missing_ok=True)
     def resume_download(self):
         if self.busy or self.paused_download is None:return
         if not self.resume_cookie_selected:
@@ -344,7 +352,7 @@ class App(ctk.CTk):
         cookie_file=self.selected_cookies()
         if cookie_file is None: return
         self.remember_download({'source':'Spotify (spotDL)','urls':urls,'root':str(root),'format':fmt,'layout':layout,'workers':workers})
-        self.reset_download_rows()
+        self.reset_download_rows(resuming=resume is not None)
         def work():
             root.mkdir(parents=True,exist_ok=True)
             for name in ['spotdl.exe','yt-dlp.exe','ffmpeg.exe','ffprobe.exe','deno.exe']:
@@ -397,11 +405,12 @@ class App(ctk.CTk):
         if resume:root=Path(resume['root']);fmt=resume['format'];layout=resume['layout'];workers=resume['workers']
         cookie_file=self.selected_cookies()
         if cookie_file is None: return
-        self.remember_download({'source':'YouTube','items':items,'artist':artist,'root':str(root),'format':fmt,'layout':layout,'workers':workers})
-        self.reset_download_rows()
+        checkpoint=Path(resume['checkpoint']) if resume and resume.get('checkpoint') else STATE/('youtube-queue-'+uuid.uuid4().hex+'.json')
+        self.remember_download({'source':'YouTube','items':items,'artist':artist,'root':str(root),'format':fmt,'layout':layout,'workers':workers,'checkpoint':str(checkpoint)})
+        self.reset_download_rows(resuming=resume is not None)
         def work():
             failures=0; jobs=[]
-            for number,item in enumerate(items,1):
+            for number,item in enumerate([] if checkpoint.exists() else items,1):
                 if self.cancel.is_set(): break
                 try:
                     url=youtube_url(item['url']); info=self.inspect_url(url,cookie_file)
@@ -417,13 +426,17 @@ class App(ctk.CTk):
                     if self.youtube_auth_required:
                         self.emit('youtube_auth',None); return
                     if not self.cancel.is_set(): failures+=1; self.emit('log',str(e))
-            if jobs and not self.cancel.is_set():
+            if (jobs or checkpoint.exists()) and not self.cancel.is_set():
                 self.queue_tracker.begin(1)
+                if checkpoint.exists():
+                    saved=json.loads(checkpoint.read_text(encoding='utf-8'))['tasks']
+                    self.queue_tracker.consume(PARALLEL_PROGRESS+json.dumps({'total':len(saved),'completed':sum(bool(task.get('finished')) for task in saved),'partial':0,'failed':0,'running':0}))
                 with tempfile.TemporaryDirectory(prefix='Albumilataaja-queue-') as temporary:
                     manifest=Path(temporary)/'queue.json'; manifest.write_text(json.dumps(jobs),encoding='utf-8')
                     worker=TOOLS/'youtube-parallel.exe'
                     args=[str(worker)] if getattr(sys,'frozen',False) else [sys.executable,str(Path(__file__).with_name('youtube_parallel.py'))]
                     args += [str(manifest),'--workers',str(workers)]
+                    args += ['--checkpoint',str(checkpoint)]
                     if cookie_file: args+=['--cookies',cookie_file]
                     self.emit('status',f'YouTube: enintään {workers} samanaikaista latausta…')
                     code=self.execute(args,tracking=True)
@@ -436,6 +449,7 @@ class App(ctk.CTk):
         with tempfile.TemporaryDirectory(prefix='Albumilataaja-job-') as workspace, isolated_cookie_arguments(args,workspace) as args:
             self.download_errors=False
             self.youtube_auth_required=False
+            cooperative_youtube=any(Path(value).name in ('youtube-parallel.exe','youtube_parallel.py') for value in args[:2])
             env=os.environ.copy(); env['PATH']=str(TOOLS)+os.pathsep+env.get('PATH',''); env['PYTHONIOENCODING']='utf-8'; env['NO_COLOR']='1'
             env['ALBUMILATAAJA_WORKSPACE']=workspace
             p=subprocess.Popen(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE if capture else subprocess.STDOUT,text=True,encoding='utf-8',errors='replace',creationflags=NO_WINDOW,env=env,cwd=STATE)
@@ -466,8 +480,12 @@ class App(ctk.CTk):
                     if requires_youtube_auth(line):
                         self.youtube_auth_required=True; self.download_errors=True
                         self.emit('log','YouTube pyytää kirjautumista tai manuaalista varmistusta. Jono pysäytettiin.')
-                        subprocess.run(['taskkill','/PID',str(p.pid),'/T','/F'],capture_output=True,creationflags=NO_WINDOW)
-                        break
+                        if not cooperative_youtube:
+                            subprocess.run(['taskkill','/PID',str(p.pid),'/T','/F'],capture_output=True,creationflags=NO_WINDOW)
+                            break
+                        # The queue worker stops its children and checkpoints
+                        # any concurrent completed files before returning.
+                        continue
                     if re.search(r'\b(error|failed|exception)\b|\b\w*(?:Error|Exception):',line,re.I): self.download_errors=True
                     internal_progress=tracking and self.queue_tracker.consume(line)
                     if line and not internal_progress: self.emit('log',line)

@@ -1,4 +1,5 @@
 import json
+import sys
 from pathlib import Path
 import tempfile
 import threading
@@ -14,7 +15,7 @@ from download_rows import DownloadRows,parse_row
 class ParallelDownloadTests(unittest.TestCase):
     def test_resume_with_refreshed_cookies_skips_finished_and_retries_pending_tracks(self):
         with tempfile.TemporaryDirectory() as directory:
-            root=Path(directory);tasks=self.tasks(root,3);source=root/'cookies.txt'
+            root=Path(directory);tasks=self.tasks(root,3);source=root/'cookies.txt';checkpoint=root/'checkpoint.json'
             old='# Netscape HTTP Cookie File\n# old synthetic session\n'
             fresh='# Netscape HTTP Cookie File\n# refreshed synthetic session\n'
             source.write_text(old);started=[];records=[]
@@ -24,18 +25,27 @@ class ParallelDownloadTests(unittest.TestCase):
                     self.cookies=Path(args[args.index('--cookies')+1]).read_text()
                     started.append((self.id,self.cookies))
                     self.blocked=self.id=='B'*11 and self.cookies==old
-                    self.stdout=iter(["ERROR: Sign in to confirm you're not a bot"] if self.blocked else [])
+                    self.stdout=iter(["WARNING: [youtube] The provided YouTube account cookies are no longer valid."] if self.blocked else [])
                 def poll(self):return 1 if self.blocked else 0
                 def wait(self):
                     if not self.blocked:Path(self.args[self.args.index('--download-archive')+1]).write_text('youtube '+self.id+'\n')
                     return int(self.blocked)
             with patch.object(parallel.subprocess,'Popen',side_effect=Process),patch.object(parallel,'finalize_download',return_value='') as finalize:
-                self.assertEqual(parallel.Batch(tasks,1,str(source),root,records.append).run(),2)
+                self.assertEqual(parallel.Batch(tasks,1,str(source),root,records.append,checkpoint=checkpoint).run(),2)
                 self.assertEqual(source.read_text(),old)
                 self.assertEqual(Path(tasks[0]['archive']).read_text(),'youtube '+'A'*11+'\n')
+                saved=json.loads(checkpoint.read_text())['tasks']
+                self.assertTrue(saved[0]['finished']);self.assertFalse(saved[1].get('finished',False))
+                self.assertNotIn('synthetic session',checkpoint.read_text())
                 source.write_text(fresh)
-                self.assertEqual(parallel.Batch(tasks,1,str(source),root,records.append).run(),0)
+                manifest=root/'manifest.json';manifest.write_text('[]')
+                resume_start=len(records)
+                with patch.object(sys,'argv',['worker',str(manifest),'--checkpoint',str(checkpoint),'--workers','1','--cookies',str(source)]),patch.object(parallel,'prepare_tasks',side_effect=AssertionError('Must not re-fetch the playlist')),patch.object(parallel,'output',side_effect=records.append):
+                    self.assertEqual(parallel.main(),0)
                 self.assertEqual(finalize.call_count,3)
+            initial=json.loads(next(line[len(PARALLEL_PROGRESS):] for line in records[resume_start:] if line.startswith(PARALLEL_PROGRESS)))
+            self.assertEqual(initial['total'],3);self.assertEqual(initial['completed'],1);self.assertEqual(initial['running'],0)
+            self.assertTrue(all(task.get('finished') for task in json.loads(checkpoint.read_text())['tasks']))
             self.assertEqual(started,[('A'*11,old),('B'*11,old),('B'*11,fresh),('C'*11,fresh)])
             self.assertEqual(source.read_text(),fresh)
             self.assertEqual(set(Path(tasks[0]['archive']).read_text().splitlines()),{'youtube '+letter*11 for letter in 'ABC'})

@@ -8,6 +8,9 @@ import app
 from youtube_session import requires_youtube_auth, validate_cookie_file, isolated_cookie_arguments
 
 class YouTubeSessionTests(unittest.TestCase):
+    def test_expired_cookie_warning_requires_refresh_but_generic_403_does_not(self):
+        self.assertTrue(requires_youtube_auth('WARNING: [youtube] The provided YouTube account cookies are no longer valid. They have likely been rotated in the browser as a security measure.'))
+        self.assertFalse(requires_youtube_auth('ERROR: unable to download video data: HTTP Error 403: Forbidden'))
     def test_original_cookie_file_survives_engine_writes_success_failure_and_cancel(self):
         with tempfile.TemporaryDirectory() as temporary:
             source=Path(temporary)/'original.txt'

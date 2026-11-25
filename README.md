@@ -52,7 +52,9 @@ Latauspalkki seuraa **koko jonoa**. Sen alla näkyvät käsiteltyjen tiedostojen
 
 Kirjautumis- tai varmistuspyyntö pysäyttää koko jonon. Jos palvelu alkaa rajoittaa latauksia, pienennä samanaikaisten latausten määrää.
 
-Pysähtyneen jonon voi jatkaa samassa sovellusistunnossa: valitse uusi **YouTube-evästeet**-tiedosto ja paina **Jatka jonoa**. Jatkaminen palauttaa alkuperäiset linkit, lähteen, tallennuskansion, tiedostomuodon, kansiomuodon ja rinnakkaisten latausten määrän. Jo valmistuneet kappaleet ohitetaan lataushistorian avulla; kesken jääneet kappaleet aloitetaan uudelleen. Tämä toimii sekä YouTube- että Spotify-lähteellä. Painike tulee näkyviin kirjautumispyynnön pysäytettyä jonon. Uuden latausjonon aloittaminen korvaa aiemman jatkettavan jonon. Jatkojonoa ei tallenneta levylle eikä palauteta sovelluksen sulkemisen jälkeen.
+Pysähtyneen jonon voi jatkaa samassa sovellusistunnossa: valitse uusi **YouTube-evästeet**-tiedosto ja paina **Jatka jonoa**. Jatkaminen palauttaa alkuperäiset linkit, lähteen, tallennuskansion, tiedostomuodon, kansiomuodon ja rinnakkaisten latausten määrän. Jo valmistuneet kappaleet ohitetaan lataushistorian avulla; kesken jääneet kappaleet aloitetaan uudelleen. Tämä toimii sekä YouTube- että Spotify-lähteellä. Painike tulee näkyviin kirjautumispyynnön tai vanhentuneiden evästeiden varoituksen pysäytettyä jonon. Uuden latausjonon aloittaminen korvaa aiemman jatkettavan jonon. Jatkettava jono palautuu vain samassa sovellusistunnossa.
+
+YouTube-jono tallentaa paikalliseen tarkistuspistetiedostoon alkuperäisen kappalelistan ja tiedon valmiista kappaleista. Jatkaminen ei hae soittolistaa uudelleen eikä lataa valmiita kappaleita; kappalerivit ja koko jonon valmistuneiden määrä säilyvät. Tarkistuspisteeseen ei tallenneta evästeitä. Tiedosto poistetaan jonon valmistuttua tai uuden jonon korvatessa sen.
 
 ## Kansiomuodot
 
@@ -163,4 +165,4 @@ Lähdekoodi on `lahdekoodi/`-kansiossa. Rakentaminen vaatii Windowsin, Python 3.
 
 Skripti asentaa Python-riippuvuudet, ajaa testit, lataa lukitut taustatyökalut ja tarkistaa niiden SHA-256:t. Se rakentaa taustatyökalut, sovelluksen, asentajan, portable-paketin ja tarkistussummat `dist/`-kansioon. Rakennuksessa käytetyt työkalut ovat tiedostossa `lahdekoodi/tools-lock.json`. Kolmansien osapuolten lisenssit ja lähteet on kuvattu tiedostossa [THIRD_PARTY.md](THIRD_PARTY.md).
 
-Uutta versiota varten päivitä `VERSION` tiedostossa `lahdekoodi/app.py` ja julkaise vastaava Git-tagi, esimerkiksi seuraavana korjauspäivityksenä `v1.4.2`. GitHub Actions testaa ja paketoi sovelluksen sekä julkaisee asentajan, portable-paketin ja tarkistussummat. Pysyvä AppId mahdollistaa päivityksen nykyisen asennuksen paikalle.
+Uutta versiota varten päivitä `VERSION` tiedostossa `lahdekoodi/app.py` ja julkaise vastaava Git-tagi, esimerkiksi seuraavana korjauspäivityksenä `v1.4.3`. GitHub Actions testaa ja paketoi sovelluksen sekä julkaisee asentajan, portable-paketin ja tarkistussummat. Pysyvä AppId mahdollistaa päivityksen nykyisen asennuksen paikalle.

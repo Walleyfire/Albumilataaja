@@ -34,7 +34,7 @@ def validate_cookie_file(value):
 
 def requires_youtube_auth(line):
     text=line.casefold().replace('’',"'")
-    return any(message in text for message in ["sign in to confirm you're not a bot",'sign in to confirm you are not a bot','login required','use --cookies-from-browser or --cookies for the authentication'])
+    return any(message in text for message in ["sign in to confirm you're not a bot",'sign in to confirm you are not a bot','login required','use --cookies-from-browser or --cookies for the authentication','the provided youtube account cookies are no longer valid'])
 
 AUTH_HELP=('YouTube pyytää kirjautumista tai manuaalista varmistusta. Latausjono pysäytettiin.\n\n'
            'Avaa YouTube itse selaimessa ja tee sen pyytämä varmistus. Jos lataus tarvitsee kirjautumisistunnon, '

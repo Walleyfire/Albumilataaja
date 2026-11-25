@@ -25,6 +25,10 @@ def parse_row(line):
 class DownloadRows:
     def __init__(self): self.rows={}
     def clear(self): self.rows.clear()
+    def resume(self):
+        for row in self.rows.values():
+            if row['stage'] not in ('done','skipped'):
+                row.update(stage='queued',percent=None,error='',filename='')
     def update(self,data):
         key=data.get('id')
         if not isinstance(key,str) or not key or len(key)>4096: return
